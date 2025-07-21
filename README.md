@@ -47,23 +47,23 @@ EOF
 - `GITHUB_TOKEN`: 从 [GitHub Settings](https://github.com/settings/tokens) 获取
   - 示例：`ghp_1234567890abcdefghijklmnopqrstuvwxyz1234`
 - `GITHUB_REPO`: 您的 GitHub 仓库（格式：用户名/仓库名）
-  - 示例：`myusername/my-clash-rules`
+  - 示例：`Aethersailor/Custom_OpenClash_Rules`
 - `DIRECT_RULE_FILE`: 直连规则文件路径
-  - 示例：`rules/direct.txt` 或 `clash/direct.list`
+  - 示例：`rule/Custom_Direct.list`
 
 **可选参数：**
 - `PROXY_RULE_FILE`: 代理规则文件路径（暂不使用）
-  - 示例：`rules/proxy.txt` 或 `clash/proxy.list`
+  - 示例：`rule/Custom_Proxy.list`
 - `GITHUB_COMMIT_EMAIL`: 自定义提交邮箱地址
   - 示例：`your-email@example.com`
 - `LOG_LEVEL`: 日志级别（默认：INFO）
   - 可选值：`DEBUG`、`INFO`、`WARNING`、`ERROR`
 - `REQUIRED_GROUP_ID`: 群组验证 ID
-  - 示例：`-1001234567890`
+  - 示例：`-1002413971610`
 - `REQUIRED_GROUP_NAME`: 群组验证名称
-  - 示例：`My Clash Rules Group`
+  - 示例：`Custom_OpenClash_Rules | 交流群`
 - `REQUIRED_GROUP_LINK`: 群组验证链接
-  - 示例：`https://t.me/my_clash_rules_group`
+  - 示例：`https://t.me/custom_openclash_rules_group`
 
 3. **启动服务**
 ```bash
@@ -357,15 +357,15 @@ docker pull aethersailor/rule-bot:v1.0.0
 | **必需参数** | | | |
 | `TELEGRAM_BOT_TOKEN` | 必需 | Telegram 机器人 Token | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` |
 | `GITHUB_TOKEN` | 必需 | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
-| `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `your_username/your_repository_name` |
-| `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rules/direct.txt` |
+| `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `Aethersailor/Custom_OpenClash_Rules` |
+| `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rule/Custom_Direct.list` |
 | **可选参数** | | | |
-| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rules/proxy.txt` |
+| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rule/Custom_Proxy.list` |
 | `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` |
 | `LOG_LEVEL` | 可选 | 日志级别 | `INFO` |
-| `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1001234567890` |
-| `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `My Group` |
-| `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/my_group` |
+| `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1002413971610` |
+| `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `Custom_OpenClash_Rules | 交流群` |
+| `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/custom_openclash_rules_group` |
 
 
 #### 🔑 权限要求
@@ -386,9 +386,9 @@ docker pull aethersailor/rule-bot:v1.0.0
 
 ```yaml
 # 启用群组验证
-- REQUIRED_GROUP_ID=-1001234567890
-- REQUIRED_GROUP_NAME=My Clash Rules Group
-- REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
+- REQUIRED_GROUP_ID=-1002413971610
+- REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
+- REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
 
 # 禁用群组验证（注释掉或删除这些行）
 # - REQUIRED_GROUP_ID=
@@ -409,8 +409,8 @@ docker pull aethersailor/rule-bot:v1.0.0
 environment:
   - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
   - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  - GITHUB_REPO=myusername/my-clash-rules
-  - DIRECT_RULE_FILE=rules/direct.txt
+  - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
+  - DIRECT_RULE_FILE=rule/Custom_Direct.list
 ```
 
 **完整配置示例（包含所有可选参数）：**
@@ -419,16 +419,16 @@ environment:
   # 必需参数
   - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
   - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  - GITHUB_REPO=myusername/my-clash-rules
-  - DIRECT_RULE_FILE=rules/direct.txt
+  - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
+  - DIRECT_RULE_FILE=rule/Custom_Direct.list
   
   # 可选参数
-  # - PROXY_RULE_FILE=rules/proxy.txt
+  # - PROXY_RULE_FILE=rule/Custom_Proxy.list
   # - GITHUB_COMMIT_EMAIL=your-email@example.com
   - LOG_LEVEL=INFO
-  # - REQUIRED_GROUP_ID=-1001234567890
-  # - REQUIRED_GROUP_NAME=My Clash Rules Group
-  # - REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
+  # - REQUIRED_GROUP_ID=-1002413971610
+  # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
+  # - REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
 ```
 
 ## 使用方法
