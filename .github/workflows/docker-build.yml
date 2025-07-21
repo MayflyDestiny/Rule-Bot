@@ -57,9 +57,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          # 关键优化：并行构建和构建参数
-          parallel: true
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1 
+          # 全新编译：禁用所有缓存
+          no-cache: true 
