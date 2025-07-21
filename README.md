@@ -361,4 +361,25 @@ Copyright (c) 2024 AetherSailor
 
 ## 📝 更新日志
 
-详细的更新日志请查看 [CHANGELOG.md](CHANGELOG.md) 文件。 
+<details>
+<summary>点击展开查看更新日志</summary>
+
+### v0.1.0 (当前版本)
+- 🎉 初始版本发布
+- ✅ 支持域名查询和添加直连规则
+- ✅ 自动 GeoIP/GeoSite 数据更新
+- ✅ 完整的 Docker 部署方案
+- ✅ 群组验证功能
+- ✅ 智能域名检测和重复检查
+- ✅ 详细的日志记录和错误处理
+- ✅ GitHub Actions 多架构构建支持
+- ✅ 优化的 Docker 镜像标签策略
+
+### 技术特性
+- 多阶段 Docker 构建优化
+- 支持 linux/amd64, linux/arm64, linux/arm/v7, linux/386 架构
+- 智能缓存策略和构建性能优化
+- 完整的错误处理和日志系统
+- 模块化代码设计
+
+</details> 
