@@ -26,7 +26,13 @@ services:
       - GITHUB_REPO=your_username/your_repository_name
       - DIRECT_RULE_FILE=your_direct_rule_file_path
       # 可选配置参数
+      # - PROXY_RULE_FILE=your_proxy_rule_file_path
+      # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
       - LOG_LEVEL=INFO
+      # - REQUIRED_GROUP_ID=your_group_id_here
+      # - REQUIRED_GROUP_NAME=Your Group Name
+      # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
+      - TZ=Asia/Shanghai
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -43,7 +49,13 @@ EOF
 - `DIRECT_RULE_FILE`: 直连规则文件路径
 
 **可选参数：**
+- `PROXY_RULE_FILE`: 代理规则文件路径（暂不使用）
+- `GITHUB_COMMIT_EMAIL`: 自定义提交邮箱地址
 - `LOG_LEVEL`: 日志级别（默认：INFO）
+- `REQUIRED_GROUP_ID`: 群组验证 ID
+- `REQUIRED_GROUP_NAME`: 群组验证名称
+- `REQUIRED_GROUP_LINK`: 群组验证链接
+- `TZ`: 时区设置（默认：Asia/Shanghai）
 
 3. **启动服务**
 ```bash
@@ -173,6 +185,13 @@ services:
       - DIRECT_RULE_FILE=your_direct_rule_file_path
       
       # ========== 可选配置参数 ==========
+      # 代理规则文件路径 (可选，暂不使用)
+      # - PROXY_RULE_FILE=your_proxy_rule_file_path
+      
+      # GitHub Commit Email (可选: 自定义Rule-Bot的邮箱地址)
+      # 提交者名称固定为 Rule-Bot，邮箱可自定义
+      # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
+      
       # 日志级别 (可选: DEBUG, INFO, WARNING, ERROR)
       - LOG_LEVEL=INFO
       
@@ -182,8 +201,9 @@ services:
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
       
-      # 代理规则文件路径 (暂不支持，保留用于未来扩展)
-      # - PROXY_RULE_FILE=your_proxy_rule_file_path
+      # ========== 系统配置 ==========
+      # 时区设置 (设置为北京时间)
+      - TZ=Asia/Shanghai
       # ========================================
     volumes:
       - ./data:/app/data
@@ -249,10 +269,13 @@ docker run -d \
   -e GITHUB_REPO="your_username/your_repository_name" \
   -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
   # 可选参数
+  # -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
+  # -e GITHUB_COMMIT_EMAIL="your-custom-email@example.com" \
   -e LOG_LEVEL="INFO" \
   -e REQUIRED_GROUP_ID="your_group_id_here" \
   -e REQUIRED_GROUP_NAME="Your Group Name" \
   -e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
+  -e TZ="Asia/Shanghai" \
   # 数据卷挂载
   -v $(pwd)/rule-bot-data:/app/data \
   -v $(pwd)/rule-bot-logs:/app/logs \
@@ -333,11 +356,13 @@ docker pull aethersailor/rule-bot:v1.0.0
 | `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `your_username/your_repository_name` |
 | `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rules/direct.txt` |
 | **可选参数** | | | |
+| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rules/proxy.txt` |
+| `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` |
 | `LOG_LEVEL` | 可选 | 日志级别 | `INFO` |
 | `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1001234567890` |
 | `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `My Group` |
 | `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/my_group` |
-| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不支持） | `rules/proxy.txt` |
+| `TZ` | 可选 | 时区设置 | `Asia/Shanghai` |
 
 #### 🔑 权限要求
 
@@ -394,10 +419,13 @@ environment:
   - DIRECT_RULE_FILE=rules/direct.txt
   
   # 可选参数
+  # - PROXY_RULE_FILE=rules/proxy.txt
+  # - GITHUB_COMMIT_EMAIL=your-email@example.com
   - LOG_LEVEL=INFO
-  - REQUIRED_GROUP_ID=-1001234567890
-  - REQUIRED_GROUP_NAME=My Clash Rules Group
-  - REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
+  # - REQUIRED_GROUP_ID=-1001234567890
+  # - REQUIRED_GROUP_NAME=My Clash Rules Group
+  # - REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
+  - TZ=Asia/Shanghai
 ```
 
 ## 使用方法
