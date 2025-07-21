@@ -4,8 +4,16 @@ on:
   push:
     branches: [ master, dev ]
     tags: [ 'v*' ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
   pull_request:
     branches: [ master, dev ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
 
 # 添加并发控制，避免重复构建
 concurrency:
