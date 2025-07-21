@@ -26,14 +26,12 @@ jobs:
     # 添加策略配置，优化并发
     strategy:
       matrix:
-        # 根据平台需求调整，建议 2-4 个并发构建
-        platform: [linux/amd64, linux/arm64]
-        # 如果需要 arm/v7，可以添加，但会增加构建时间
-        # platform: [linux/amd64, linux/arm64, linux/arm/v7]
+        # 支持完整架构覆盖
+        platform: [linux/amd64, linux/arm64, linux/arm/v7, linux/386]
       # 失败时快速失败
       fail-fast: false
       # 最大并发数，根据 GitHub Actions 限制调整
-      max-parallel: 2
+      max-parallel: 4
 
     steps:
       - name: Checkout repository
@@ -86,9 +84,9 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_STEP_LOG_MAX_SIZE=10485760
             BUILDKIT_STEP_LOG_MAX_SPEED=10485760
-          # 优化缓存策略
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # 临时禁用缓存，避免 GitHub Actions 缓存服务问题
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
 
       # 添加构建完成通知（可选）
       - name: Build Summary
