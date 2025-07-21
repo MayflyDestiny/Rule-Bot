@@ -32,7 +32,6 @@ services:
       # - REQUIRED_GROUP_ID=your_group_id_here
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
-      - TZ=Asia/Shanghai
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -44,18 +43,27 @@ EOF
 
 **必需参数：**
 - `TELEGRAM_BOT_TOKEN`: 从 [@BotFather](https://t.me/BotFather) 获取
+  - 示例：`1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
 - `GITHUB_TOKEN`: 从 [GitHub Settings](https://github.com/settings/tokens) 获取
+  - 示例：`ghp_1234567890abcdefghijklmnopqrstuvwxyz1234`
 - `GITHUB_REPO`: 您的 GitHub 仓库（格式：用户名/仓库名）
+  - 示例：`myusername/my-clash-rules`
 - `DIRECT_RULE_FILE`: 直连规则文件路径
+  - 示例：`rules/direct.txt` 或 `clash/direct.list`
 
 **可选参数：**
 - `PROXY_RULE_FILE`: 代理规则文件路径（暂不使用）
+  - 示例：`rules/proxy.txt` 或 `clash/proxy.list`
 - `GITHUB_COMMIT_EMAIL`: 自定义提交邮箱地址
+  - 示例：`your-email@example.com`
 - `LOG_LEVEL`: 日志级别（默认：INFO）
+  - 可选值：`DEBUG`、`INFO`、`WARNING`、`ERROR`
 - `REQUIRED_GROUP_ID`: 群组验证 ID
+  - 示例：`-1001234567890`
 - `REQUIRED_GROUP_NAME`: 群组验证名称
+  - 示例：`My Clash Rules Group`
 - `REQUIRED_GROUP_LINK`: 群组验证链接
-- `TZ`: 时区设置（默认：Asia/Shanghai）
+  - 示例：`https://t.me/my_clash_rules_group`
 
 3. **启动服务**
 ```bash
@@ -201,10 +209,7 @@ services:
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
       
-      # ========== 系统配置 ==========
-      # 时区设置 (设置为北京时间)
-      - TZ=Asia/Shanghai
-      # ========================================
+
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -275,7 +280,6 @@ docker run -d \
   -e REQUIRED_GROUP_ID="your_group_id_here" \
   -e REQUIRED_GROUP_NAME="Your Group Name" \
   -e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
-  -e TZ="Asia/Shanghai" \
   # 数据卷挂载
   -v $(pwd)/rule-bot-data:/app/data \
   -v $(pwd)/rule-bot-logs:/app/logs \
@@ -362,7 +366,7 @@ docker pull aethersailor/rule-bot:v1.0.0
 | `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1001234567890` |
 | `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `My Group` |
 | `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/my_group` |
-| `TZ` | 可选 | 时区设置 | `Asia/Shanghai` |
+
 
 #### 🔑 权限要求
 
@@ -425,7 +429,6 @@ environment:
   # - REQUIRED_GROUP_ID=-1001234567890
   # - REQUIRED_GROUP_NAME=My Clash Rules Group
   # - REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
-  - TZ=Asia/Shanghai
 ```
 
 ## 使用方法
