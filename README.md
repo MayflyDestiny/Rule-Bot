@@ -52,18 +52,26 @@ EOF
   - 示例：`rule/Custom_Direct.list`
 
 **可选参数：**
+> 💡 **提示：所有可选参数都可以不填写，不影响机器人正常使用。必要参数已设置预设默认值。**
+
 - `PROXY_RULE_FILE`: 代理规则文件路径（暂不使用）
   - 示例：`rule/Custom_Proxy.list`
+  - 默认：不填写（功能暂未启用）
 - `GITHUB_COMMIT_EMAIL`: 自定义提交邮箱地址
   - 示例：`your-email@example.com`
-- `LOG_LEVEL`: 日志级别（默认：INFO）
+  - 默认：不填写（使用系统默认邮箱）
+- `LOG_LEVEL`: 日志级别
   - 可选值：`DEBUG`、`INFO`、`WARNING`、`ERROR`
+  - 默认：`INFO`
 - `REQUIRED_GROUP_ID`: 群组验证 ID
   - 示例：`-1002413971610`
+  - 默认：不填写（群组验证功能关闭）
 - `REQUIRED_GROUP_NAME`: 群组验证名称
   - 示例：`Custom_OpenClash_Rules | 交流群`
+  - 默认：不填写（群组验证功能关闭）
 - `REQUIRED_GROUP_LINK`: 群组验证链接
   - 示例：`https://t.me/custom_openclash_rules_group`
+  - 默认：不填写（群组验证功能关闭）
 
 3. **启动服务**
 ```bash
@@ -352,20 +360,20 @@ docker pull aethersailor/rule-bot:v1.0.0
 
 #### 📋 配置项详细说明
 
-| 配置项 | 类型 | 说明 | 示例 |
-|--------|------|------|------|
-| **必需参数** | | | |
-| `TELEGRAM_BOT_TOKEN` | 必需 | Telegram 机器人 Token | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` |
-| `GITHUB_TOKEN` | 必需 | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
-| `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `Aethersailor/Custom_OpenClash_Rules` |
-| `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rule/Custom_Direct.list` |
-| **可选参数** | | | |
-| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rule/Custom_Proxy.list` |
-| `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` |
-| `LOG_LEVEL` | 可选 | 日志级别 | `INFO` |
-| `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1002413971610` |
-| `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `Custom_OpenClash_Rules | 交流群` |
-| `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/custom_openclash_rules_group` |
+| 配置项 | 类型 | 说明 | 示例 | 默认值 |
+|--------|------|------|------|--------|
+| **必需参数** | | | | |
+| `TELEGRAM_BOT_TOKEN` | 必需 | Telegram 机器人 Token | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` | 无 |
+| `GITHUB_TOKEN` | 必需 | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | 无 |
+| `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `Aethersailor/Custom_OpenClash_Rules` | 无 |
+| `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rule/Custom_Direct.list` | 无 |
+| **可选参数** | | | | |
+| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rule/Custom_Proxy.list` | 不填写 |
+| `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` | 系统默认 |
+| `LOG_LEVEL` | 可选 | 日志级别 | `INFO` | `INFO` |
+| `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1002413971610` | 不填写 |
+| `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `Custom_OpenClash_Rules | 交流群` | 不填写 |
+| `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/custom_openclash_rules_group` | 不填写 |
 
 
 #### 🔑 权限要求
@@ -384,13 +392,15 @@ docker pull aethersailor/rule-bot:v1.0.0
 
 群组验证功能可以让您限制只有特定群组的成员才能使用机器人：
 
+> ⚠️ **注意：群组验证功能默认关闭。只有同时配置了 `REQUIRED_GROUP_ID`、`REQUIRED_GROUP_NAME` 和 `REQUIRED_GROUP_LINK` 三个参数时，群组验证才会生效。**
+
 ```yaml
-# 启用群组验证
+# 启用群组验证（需要同时配置三个参数）
 - REQUIRED_GROUP_ID=-1002413971610
 - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
 - REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
 
-# 禁用群组验证（注释掉或删除这些行）
+# 禁用群组验证（默认行为，不填写任何群组参数即可）
 # - REQUIRED_GROUP_ID=
 # - REQUIRED_GROUP_NAME=
 # - REQUIRED_GROUP_LINK=
@@ -407,25 +417,36 @@ docker pull aethersailor/rule-bot:v1.0.0
 **最小配置示例（仅必需参数）：**
 ```yaml
 environment:
-  - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
-  - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
-  - DIRECT_RULE_FILE=rule/Custom_Direct.list
-```
-
-**完整配置示例（包含所有可选参数）：**
-```yaml
-environment:
-  # 必需参数
+  # 必需参数（必须填写）
   - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
   - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
   
-  # 可选参数
-  # - PROXY_RULE_FILE=rule/Custom_Proxy.list
-  # - GITHUB_COMMIT_EMAIL=your-email@example.com
-  - LOG_LEVEL=INFO
+  # 可选参数（可以不填写，使用默认值）
+  # - LOG_LEVEL=INFO  # 默认值
+  # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 暂不使用
+  # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 使用系统默认
+  # - REQUIRED_GROUP_ID=-1002413971610  # 群组验证默认关闭
+  # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
+  # - REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
+```
+
+**完整配置示例（包含所有可选参数）：**
+```yaml
+environment:
+  # 必需参数（必须填写）
+  - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+  - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
+  - DIRECT_RULE_FILE=rule/Custom_Direct.list
+  
+  # 可选参数（根据需要选择填写）
+  - LOG_LEVEL=INFO  # 日志级别
+  # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 代理规则（暂不使用）
+  # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 自定义邮箱
+  
+  # 群组验证（需要同时配置三个参数才生效）
   # - REQUIRED_GROUP_ID=-1002413971610
   # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
   # - REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
