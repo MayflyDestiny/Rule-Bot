@@ -1,7 +1,7 @@
 # 多阶段构建：编译阶段
 FROM python:3.11-alpine AS builder
 
-# 安装编译依赖
+# 安装编译依赖（包括 Rust 编译器）
 RUN apk add --no-cache \
     gcc \
     g++ \
@@ -9,7 +9,9 @@ RUN apk add --no-cache \
     libffi-dev \
     libsodium-dev \
     musl-dev \
-    python3-dev
+    python3-dev \
+    rust \
+    cargo
 
 # 复制依赖文件
 COPY requirements.txt .

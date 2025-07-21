@@ -27,6 +27,7 @@ jobs:
         with:
           driver-opts: |
             image=moby/buildkit:v0.12.0
+            network=host
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -57,5 +58,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # 全新编译：禁用所有缓存
-          no-cache: true 
+          # 启用多线程构建优化
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILDKIT_STEP_LOG_MAX_SIZE=10485760
+            BUILDKIT_STEP_LOG_MAX_SPEED=10485760
+          # 启用缓存
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
