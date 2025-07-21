@@ -1,10 +1,8 @@
 # 多阶段构建：编译阶段
 FROM python:3.11-alpine AS builder
 
-# 设置构建参数，支持多线程编译
+# 设置构建参数
 ARG BUILDKIT_INLINE_CACHE=1
-ARG BUILDKIT_MAX_PARALLELISM=4
-ARG BUILDKIT_MAX_CONCURRENT=4
 
 # 安装编译依赖（包括 Rust 编译器）
 RUN apk add --no-cache \
