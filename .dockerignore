@@ -7,11 +7,15 @@
 README.md
 *.md
 
-# 开发文件
+# 开发环境
 .vscode
 .idea
-*.pyc
+*.swp
+*.swo
+
+# Python 相关
 __pycache__
+*.pyc
 *.pyo
 *.pyd
 .Python
@@ -31,16 +35,30 @@ coverage.xml
 .pytest_cache
 .hypothesis
 
-# 数据文件
-data/
-logs/
-*.log
-
 # 临时文件
 *.tmp
 *.temp
 .DS_Store
 Thumbs.db
+
+# 日志文件
+logs/
+*.log
+
+# 数据文件
+data/
+*.db
+*.sqlite
+
+# 测试文件
+tests/
+test_*
+*_test.py
+
+# 构建产物
+dist/
+build/
+*.egg-info/
 
 # 环境文件
 .env

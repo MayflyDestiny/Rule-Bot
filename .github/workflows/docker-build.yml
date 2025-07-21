@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [ master, dev ]
 
+# 添加并发控制，避免重复构建
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: docker.io
   IMAGE_NAME: aethersailor/rule-bot
@@ -18,9 +23,24 @@ jobs:
       contents: read
       packages: write
 
+    # 添加策略配置，优化并发
+    strategy:
+      matrix:
+        # 根据平台需求调整，建议 2-4 个并发构建
+        platform: [linux/amd64, linux/arm64]
+        # 如果需要 arm/v7，可以添加，但会增加构建时间
+        # platform: [linux/amd64, linux/arm64, linux/arm/v7]
+      # 失败时快速失败
+      fail-fast: false
+      # 最大并发数，根据 GitHub Actions 限制调整
+      max-parallel: 2
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # 启用浅克隆，减少下载时间
+          fetch-depth: 1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -28,9 +48,11 @@ jobs:
           driver-opts: |
             image=moby/buildkit:v0.12.0
             network=host
-            # 启用多线程构建，设置为 GitHub Actions 的最佳配置
-            max-parallelism=2
-            max-concurrent=2
+            # 优化构建参数，根据 GitHub Actions 资源调整
+            max-parallelism=4
+            max-concurrent=4
+            # 启用 BuildKit 实验性功能
+            experimental=true
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -52,23 +74,44 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+          # 添加更多标签信息
+          labels: |
+            org.opencontainers.image.title=Rule Bot
+            org.opencontainers.image.description=Telegram bot for rule management
+            org.opencontainers.image.vendor=AetherSailor
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
+          platforms: ${{ matrix.platform }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # 启用多线程构建优化
+          # 优化构建参数
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_STEP_LOG_MAX_SIZE=10485760
             BUILDKIT_STEP_LOG_MAX_SPEED=10485760
-            # 设置构建并发数
-            BUILDKIT_MAX_PARALLELISM=2
-            BUILDKIT_MAX_CONCURRENT=2
-          # 启用缓存
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            # 根据平台调整并发数
+            BUILDKIT_MAX_PARALLELISM=4
+            BUILDKIT_MAX_CONCURRENT=4
+            # 启用压缩优化
+            BUILDKIT_COMPRESS=1
+          # 优化缓存策略
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
+          # 启用输出压缩
+          outputs: type=image,compression=gzip,compression-level=6
+
+      # 添加构建完成通知（可选）
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "Build completed for platform: ${{ matrix.platform }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
