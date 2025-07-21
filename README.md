@@ -4,14 +4,39 @@
 
 ## ⚡ 快速开始
 
-1. **克隆项目**
+### 🚀 最简单的部署方式
+
+1. **创建 docker-compose.yml 文件**
 ```bash
-git clone https://github.com/your-username/Rule-Bot.git
-cd Rule-Bot
+# 创建项目目录
+mkdir rule-bot && cd rule-bot
+
+# 创建 docker-compose.yml 文件
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+services:
+  rule-bot:
+    image: aethersailor/rule-bot:latest
+    container_name: rule-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=你的机器人 Token
+      - GITHUB_TOKEN=你的 GitHub Token
+      - GITHUB_REPO=your_username/your_repository_name
+      - DIRECT_RULE_FILE=your_direct_rule_file_path
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+EOF
 ```
 
-2. **配置环境变量**
-编辑 `docker-compose.yml`，填入您的配置信息
+2. **配置参数**
+编辑 `docker-compose.yml`，填入您的配置信息：
+- `TELEGRAM_BOT_TOKEN`: 从 [@BotFather](https://t.me/BotFather) 获取
+- `GITHUB_TOKEN`: 从 [GitHub Settings](https://github.com/settings/tokens) 获取
+- `GITHUB_REPO`: 您的 GitHub 仓库（格式：用户名/仓库名）
+- `DIRECT_RULE_FILE`: 直连规则文件路径
 
 3. **启动服务**
 ```bash
@@ -20,6 +45,9 @@ docker-compose up -d
 
 4. **开始使用**
 在 Telegram 中找到您的机器人，发送 `/start` 开始使用
+
+### 📋 详细配置说明
+请查看下方的 [配置说明](#️-配置说明) 部分获取完整的配置选项。
 
 ## 🚀 功能特性
 
@@ -104,86 +132,218 @@ docker-compose up -d
 描述: (空)
 ```
 
-## 部署方式
+## 🚀 部署方式
 
 ### 环境要求
 - Docker 20.10+
 - Docker Compose 2.0+
 - Python 3.11+ (本地开发)
 
-### 快速部署
+### 方式一：Docker Compose 部署（推荐）
 
-1. **克隆项目**
-```bash
-git clone https://github.com/your-username/Rule-Bot.git
-cd Rule-Bot
-```
-
-2. **配置参数**
-
-编辑 `docker-compose.yml` 文件，在 environment 部分填入您的配置：
+#### 1. 创建 docker-compose.yml 文件
 
 ```yaml
-environment:
-  # ========== 请在下方填入您的配置 ==========
-  # Telegram Bot Token (从 @BotFather 获取)
-  - TELEGRAM_BOT_TOKEN=你的机器人 Token
-  
-  # GitHub Personal Access Token (需要 repo 权限)
-  - GITHUB_TOKEN=你的 GitHub Token
-  
-  # GitHub Repository (格式: 用户名/仓库名)
-  - GITHUB_REPO=your_username/your_repository_name
-  
-  # 直连规则文件路径 (相对于仓库根目录)
-  - DIRECT_RULE_FILE=your_direct_rule_file_path
-  
-  # 代理规则文件路径 (可选，暂不使用)
-  - PROXY_RULE_FILE=your_proxy_rule_file_path
-  
-  # 日志级别 (可选: DEBUG, INFO, WARNING, ERROR)
-  - LOG_LEVEL=INFO
-  # ========================================
+version: '3.8'
+
+services:
+  rule-bot:
+    image: aethersailor/rule-bot:latest
+    container_name: rule-bot
+    restart: unless-stopped
+    environment:
+      # ========== 请在下方填入您的配置 ==========
+      # Telegram Bot Token (从 @BotFather 获取)
+      - TELEGRAM_BOT_TOKEN=你的机器人 Token
+      
+      # GitHub Personal Access Token (需要 repo 权限)
+      - GITHUB_TOKEN=你的 GitHub Token
+      
+      # GitHub Repository (格式: 用户名/仓库名)
+      - GITHUB_REPO=your_username/your_repository_name
+      
+      # 直连规则文件路径 (相对于仓库根目录)
+      - DIRECT_RULE_FILE=your_direct_rule_file_path
+      
+      # 代理规则文件路径 (可选，暂不使用)
+      - PROXY_RULE_FILE=your_proxy_rule_file_path
+      
+      # 日志级别 (可选: DEBUG, INFO, WARNING, ERROR)
+      - LOG_LEVEL=INFO
+      
+      # 群组验证 (可选: 要求用户加入指定群组才能使用机器人)
+      # 留空则关闭此功能
+      # - REQUIRED_GROUP_ID=your_group_id_here
+      # - REQUIRED_GROUP_NAME=Your Group Name
+      # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
+      # ========================================
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - rule-bot-network
+
+networks:
+  rule-bot-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:
 ```
 
-3. **启动服务**
+#### 2. 启动服务
 ```bash
 docker-compose up -d
 ```
 
-4. **查看日志**
+#### 3. 查看日志
 ```bash
 docker-compose logs -f rule-bot
 ```
 
-### 配置说明
+### 方式二：Docker Run 部署
 
-#### Telegram Bot Token
+#### 1. 拉取镜像
+```bash
+docker pull aethersailor/rule-bot:latest
+```
+
+#### 2. 创建数据目录
+```bash
+mkdir -p ./rule-bot-data ./rule-bot-logs
+```
+
+#### 3. 运行容器
+```bash
+docker run -d \
+  --name rule-bot \
+  --restart unless-stopped \
+  -e TELEGRAM_BOT_TOKEN="你的机器人 Token" \
+  -e GITHUB_TOKEN="你的 GitHub Token" \
+  -e GITHUB_REPO="your_username/your_repository_name" \
+  -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
+  -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
+  -e LOG_LEVEL="INFO" \
+  -e REQUIRED_GROUP_ID="your_group_id_here" \
+  -e REQUIRED_GROUP_NAME="Your Group Name" \
+  -e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
+  -v $(pwd)/rule-bot-data:/app/data \
+  -v $(pwd)/rule-bot-logs:/app/logs \
+  aethersailor/rule-bot:latest
+```
+
+#### 4. 查看日志
+```bash
+docker logs -f rule-bot
+```
+
+### 方式三：本地构建部署
+
+如果您需要自定义构建或修改代码：
+
+1. **克隆项目**
+```bash
+git clone https://github.com/Aethersailor/Rule-Bot.git
+cd Rule-Bot
+```
+
+2. **配置参数**
+编辑 `docker-compose.yml` 文件，在 environment 部分填入您的配置
+
+3. **构建并启动**
+```bash
+docker-compose up -d --build
+```
+
+### 🏷️ 镜像标签说明
+
+| 标签 | 说明 | 适用场景 |
+|------|------|----------|
+| `latest` | 最新稳定版本 | 生产环境推荐 |
+| `dev` | 开发版本 | 测试新功能 |
+| `v1.0.0` | 特定版本 | 版本锁定 |
+
+#### 拉取特定版本
+```bash
+# 拉取最新版本
+docker pull aethersailor/rule-bot:latest
+
+# 拉取开发版本
+docker pull aethersailor/rule-bot:dev
+
+# 拉取特定版本
+docker pull aethersailor/rule-bot:v1.0.0
+```
+
+#### 支持的架构
+- ✅ `linux/amd64` (x86_64)
+- ✅ `linux/arm64` (ARM64)
+- ✅ `linux/arm/v7` (ARMv7)
+- ✅ `linux/386` (x86)
+
+### ⚙️ 配置说明
+
+#### 🔐 必需配置
+
+##### Telegram Bot Token
 1. 向 [@BotFather](https://t.me/BotFather) 发送 `/newbot`
 2. 按照提示创建机器人
 3. 复制获得的 token
 
-#### GitHub Token
+##### GitHub Token
 1. 访问 [GitHub Settings > Personal access tokens](https://github.com/settings/tokens)
 2. 点击 "Generate new token (classic)"
 3. 选择 `repo` 权限
 4. 复制生成的 token
 
-#### 配置项详细说明
+#### 📋 配置项详细说明
 
-| 配置项 | 说明 | 示例 |
-|--------|------|------|
-| `TELEGRAM_BOT_TOKEN` | Telegram 机器人 Token | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` |
-| `GITHUB_TOKEN` | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
-| `GITHUB_REPO` | 目标 GitHub 仓库 | `your_username/your_repository_name` |
-| `DIRECT_RULE_FILE` | 直连规则文件路径 | `your_direct_rule_file_path` |
-| `PROXY_RULE_FILE` | 代理规则文件路径 | `your_proxy_rule_file_path` |
-| `LOG_LEVEL` | 日志级别 | `INFO` |
+| 配置项 | 类型 | 说明 | 示例 |
+|--------|------|------|------|
+| `TELEGRAM_BOT_TOKEN` | 必需 | Telegram 机器人 Token | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` |
+| `GITHUB_TOKEN` | 必需 | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `your_username/your_repository_name` |
+| `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rules/direct.txt` |
+| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径 | `rules/proxy.txt` |
+| `LOG_LEVEL` | 可选 | 日志级别 | `INFO` |
+| `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1001234567890` |
+| `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `My Group` |
+| `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/my_group` |
 
-#### 权限要求
-- GitHub token 需要对目标仓库的 **write** 权限
-- 机器人会自动创建 commit 来添加规则
+#### 🔑 权限要求
+
+##### GitHub Token 权限
+- **必需权限**: `repo` (完整的仓库访问权限)
+- **可选权限**: `public_repo` (仅公开仓库)
+- **说明**: 机器人会自动创建 commit 来添加规则
+
+##### 仓库权限
+- 需要对目标仓库的 **write** 权限
 - 如果要修改其他人的仓库，需要先 Fork 到自己账号下
+- 建议使用自己的仓库进行测试
+
+#### 🛡️ 群组验证配置
+
+群组验证功能可以让您限制只有特定群组的成员才能使用机器人：
+
+```yaml
+# 启用群组验证
+- REQUIRED_GROUP_ID=-1001234567890
+- REQUIRED_GROUP_NAME=My Clash Rules Group
+- REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
+
+# 禁用群组验证（注释掉或删除这些行）
+# - REQUIRED_GROUP_ID=
+# - REQUIRED_GROUP_NAME=
+# - REQUIRED_GROUP_LINK=
+```
+
+##### 获取群组 ID
+1. 将机器人添加到目标群组
+2. 在群组中发送 `/start`
+3. 查看机器人日志获取群组 ID
+4. 或者使用 [@userinfobot](https://t.me/userinfobot) 获取
 
 ## 使用方法
 
