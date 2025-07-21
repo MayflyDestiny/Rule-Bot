@@ -20,10 +20,12 @@ services:
     container_name: rule-bot
     restart: unless-stopped
     environment:
+      # 必需配置参数
       - TELEGRAM_BOT_TOKEN=你的机器人 Token
       - GITHUB_TOKEN=你的 GitHub Token
       - GITHUB_REPO=your_username/your_repository_name
       - DIRECT_RULE_FILE=your_direct_rule_file_path
+      # 可选配置参数
       - LOG_LEVEL=INFO
     volumes:
       - ./data:/app/data
@@ -33,10 +35,15 @@ EOF
 
 2. **配置参数**
 编辑 `docker-compose.yml`，填入您的配置信息：
+
+**必需参数：**
 - `TELEGRAM_BOT_TOKEN`: 从 [@BotFather](https://t.me/BotFather) 获取
 - `GITHUB_TOKEN`: 从 [GitHub Settings](https://github.com/settings/tokens) 获取
 - `GITHUB_REPO`: 您的 GitHub 仓库（格式：用户名/仓库名）
 - `DIRECT_RULE_FILE`: 直连规则文件路径
+
+**可选参数：**
+- `LOG_LEVEL`: 日志级别（默认：INFO）
 
 3. **启动服务**
 ```bash
@@ -152,7 +159,7 @@ services:
     container_name: rule-bot
     restart: unless-stopped
     environment:
-      # ========== 请在下方填入您的配置 ==========
+      # ========== 必需配置参数 ==========
       # Telegram Bot Token (从 @BotFather 获取)
       - TELEGRAM_BOT_TOKEN=你的机器人 Token
       
@@ -165,9 +172,7 @@ services:
       # 直连规则文件路径 (相对于仓库根目录)
       - DIRECT_RULE_FILE=your_direct_rule_file_path
       
-      # 代理规则文件路径 (可选，暂不使用)
-      - PROXY_RULE_FILE=your_proxy_rule_file_path
-      
+      # ========== 可选配置参数 ==========
       # 日志级别 (可选: DEBUG, INFO, WARNING, ERROR)
       - LOG_LEVEL=INFO
       
@@ -176,6 +181,9 @@ services:
       # - REQUIRED_GROUP_ID=your_group_id_here
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
+      
+      # 代理规则文件路径 (暂不支持，保留用于未来扩展)
+      # - PROXY_RULE_FILE=your_proxy_rule_file_path
       # ========================================
     volumes:
       - ./data:/app/data
@@ -215,6 +223,8 @@ mkdir -p ./rule-bot-data ./rule-bot-logs
 ```
 
 #### 3. 运行容器
+
+**必需参数版本（最小配置）：**
 ```bash
 docker run -d \
   --name rule-bot \
@@ -223,11 +233,27 @@ docker run -d \
   -e GITHUB_TOKEN="你的 GitHub Token" \
   -e GITHUB_REPO="your_username/your_repository_name" \
   -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
-  -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
+  -v $(pwd)/rule-bot-data:/app/data \
+  -v $(pwd)/rule-bot-logs:/app/logs \
+  aethersailor/rule-bot:latest
+```
+
+**完整参数版本（包含所有可选配置）：**
+```bash
+docker run -d \
+  --name rule-bot \
+  --restart unless-stopped \
+  # 必需参数
+  -e TELEGRAM_BOT_TOKEN="你的机器人 Token" \
+  -e GITHUB_TOKEN="你的 GitHub Token" \
+  -e GITHUB_REPO="your_username/your_repository_name" \
+  -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
+  # 可选参数
   -e LOG_LEVEL="INFO" \
   -e REQUIRED_GROUP_ID="your_group_id_here" \
   -e REQUIRED_GROUP_NAME="Your Group Name" \
   -e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
+  # 数据卷挂载
   -v $(pwd)/rule-bot-data:/app/data \
   -v $(pwd)/rule-bot-logs:/app/logs \
   aethersailor/rule-bot:latest
@@ -301,15 +327,17 @@ docker pull aethersailor/rule-bot:v1.0.0
 
 | 配置项 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
+| **必需参数** | | | |
 | `TELEGRAM_BOT_TOKEN` | 必需 | Telegram 机器人 Token | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` |
 | `GITHUB_TOKEN` | 必需 | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `your_username/your_repository_name` |
 | `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rules/direct.txt` |
-| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径 | `rules/proxy.txt` |
+| **可选参数** | | | |
 | `LOG_LEVEL` | 可选 | 日志级别 | `INFO` |
 | `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1001234567890` |
 | `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `My Group` |
 | `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/my_group` |
+| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不支持） | `rules/proxy.txt` |
 
 #### 🔑 权限要求
 
@@ -344,6 +372,33 @@ docker pull aethersailor/rule-bot:v1.0.0
 2. 在群组中发送 `/start`
 3. 查看机器人日志获取群组 ID
 4. 或者使用 [@userinfobot](https://t.me/userinfobot) 获取
+
+#### 📝 配置示例
+
+**最小配置示例（仅必需参数）：**
+```yaml
+environment:
+  - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+  - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  - GITHUB_REPO=myusername/my-clash-rules
+  - DIRECT_RULE_FILE=rules/direct.txt
+```
+
+**完整配置示例（包含所有可选参数）：**
+```yaml
+environment:
+  # 必需参数
+  - TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+  - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  - GITHUB_REPO=myusername/my-clash-rules
+  - DIRECT_RULE_FILE=rules/direct.txt
+  
+  # 可选参数
+  - LOG_LEVEL=INFO
+  - REQUIRED_GROUP_ID=-1001234567890
+  - REQUIRED_GROUP_NAME=My Clash Rules Group
+  - REQUIRED_GROUP_LINK=https://t.me/my_clash_rules_group
+```
 
 ## 使用方法
 
