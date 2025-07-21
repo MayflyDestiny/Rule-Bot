@@ -14,12 +14,16 @@ RUN apk add --no-cache \
     musl-dev \
     python3-dev \
     rust \
-    cargo
+    cargo \
+    openssl-dev \
+    pkgconfig
 
 # 设置 Rust 编译优化
 ENV RUSTFLAGS="-C target-cpu=native"
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
-ENV CARGO_BUILD_JOBS=4
+ENV CARGO_BUILD_JOBS=2
+ENV OPENSSL_DIR=/usr
+ENV OPENSSL_LIBDIR=/usr/lib
 
 # 复制依赖文件
 COPY requirements.txt .
