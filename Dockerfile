@@ -5,11 +5,17 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
+    g++ \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Clean up build dependencies to reduce image size
+RUN apt-get purge -y gcc g++ libffi-dev && apt-get autoremove -y && apt-get clean
 
 # Copy application code
 COPY src/ ./src/
