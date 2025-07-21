@@ -31,8 +31,9 @@ def main():
             "/app/logs/rule-bot.log",
             level=config.LOG_LEVEL,
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            rotation="10 MB",
-            retention="30 days"
+            rotation="50 MB",      # 增加单个文件大小到 50MB
+            retention="7 days",    # 减少保留时间到 7 天，节省磁盘空间
+            compression="gz"       # 压缩旧日志文件
         )
         
         logger.info("Rule-Bot 正在启动...")
