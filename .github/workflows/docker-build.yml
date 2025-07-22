@@ -26,13 +26,12 @@ env:
   IMAGE_NAME: aethersailor/rule-bot
 
 jobs:
-  # Job 1: 构建 amd64 架构
-  build-amd64:
+  # 构建并推送多架构镜像
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    outputs:
-      tags: ${{ steps.meta.outputs.tags }}
+      packages: write
 
     steps:
       - name: Checkout repository
@@ -46,6 +45,13 @@ jobs:
           driver-opts: |
             image=moby/buildkit:v0.12.0
             network=host
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -62,226 +68,23 @@ jobs:
             org.opencontainers.image.description=Telegram bot for rule management
             org.opencontainers.image.vendor=AetherSailor
 
-      - name: Build amd64 image
+      - name: Build and push multi-arch image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64
-          push: false
-          outputs: type=docker,dest=/tmp/amd64.tar
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_STEP_LOG_MAX_SIZE=10485760
             BUILDKIT_STEP_LOG_MAX_SPEED=10485760
           provenance: false
-
-      - name: Debug tags output
-        run: |
-          echo "Tags output: ${{ steps.meta.outputs.tags }}"
-          TAGS="${{ steps.meta.outputs.tags }}"
-          echo "Tags length: ${#TAGS}"
-
-      - name: Upload amd64 image
-        uses: actions/upload-artifact@v4
-        with:
-          name: amd64-image
-          path: /tmp/amd64.tar
-
-  # Job 2: 构建 arm64 架构
-  build-arm64:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:v0.12.0
-            network=host
-
-      - name: Build arm64 image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/arm64
-          push: false
-          outputs: type=docker,dest=/tmp/arm64.tar
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            BUILDKIT_STEP_LOG_MAX_SIZE=10485760
-            BUILDKIT_STEP_LOG_MAX_SPEED=10485760
-          provenance: false
-
-      - name: Upload arm64 image
-        uses: actions/upload-artifact@v4
-        with:
-          name: arm64-image
-          path: /tmp/arm64.tar
-
-  # Job 3: 合并架构并推送到 Docker Hub
-  push-multiarch:
-    runs-on: ubuntu-latest
-    needs: [build-amd64, build-arm64]
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:v0.12.0
-            network=host
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Download amd64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: amd64-image
-          path: /tmp
-
-      - name: Download arm64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: arm64-image
-          path: /tmp
-
-      - name: Load images
-        run: |
-          echo "Loading amd64 image..."
-          docker load --input /tmp/amd64.tar
-          echo "Loading arm64 image..."
-          docker load --input /tmp/arm64.tar
-          echo "Available images after loading:"
-          docker images
-          echo ""
-          echo "All images with platform info:"
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"
-
-      - name: Debug information
-        run: |
-          echo "Available images:"
-          docker images
-          echo ""
-          echo "Dangling images (our loaded images):"
-          docker images --filter "dangling=true"
-          echo ""
-          echo "Tags from build-amd64: ${{ needs.build-amd64.outputs.tags }}"
-          echo "Image name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-
-      - name: Create and push multi-arch manifest
-        run: |
-          # 获取镜像标签
-          TAGS="${{ needs.build-amd64.outputs.tags }}"
-          echo "Processing tags: $TAGS"
-          
-          if [ -z "$TAGS" ]; then
-            echo "Error: No tags found!"
-            exit 1
-          fi
-          
-          # 获取加载的镜像ID（排除buildkit镜像）
-          IMAGE_IDS=$(docker images --format "{{.ID}}" --filter "dangling=true")
-          echo "Found dangling images: $IMAGE_IDS"
-          
-          AMD64_ID=""
-          ARM64_ID=""
-          
-          # 检查每个镜像的架构
-          for img_id in $IMAGE_IDS; do
-            echo "Inspecting image: $img_id"
-            ARCH=$(docker inspect $img_id --format='{{.Architecture}}' 2>/dev/null || echo "unknown")
-            echo "Image $img_id has architecture: $ARCH"
-            
-            if [ "$ARCH" = "amd64" ]; then
-              AMD64_ID=$img_id
-              echo "Found amd64 image: $img_id"
-            elif [ "$ARCH" = "arm64" ]; then
-              ARM64_ID=$img_id
-              echo "Found arm64 image: $img_id"
-            fi
-          done
-          
-          echo "Final amd64 image ID: $AMD64_ID"
-          echo "Final arm64 image ID: $ARM64_ID"
-          
-          if [ -z "$AMD64_ID" ]; then
-            echo "Error: amd64 image not found!"
-            exit 1
-          fi
-          
-          if [ -z "$ARM64_ID" ]; then
-            echo "Error: arm64 image not found!"
-            exit 1
-          fi
-          
-          # 为每个架构创建标签并推送
-          for tag in $TAGS; do
-            echo "Processing tag: $tag"
-            
-            # 使用临时标签推送各个架构的镜像
-            TEMP_AMD64_TAG="${tag}-temp-amd64-$(date +%s)"
-            TEMP_ARM64_TAG="${tag}-temp-arm64-$(date +%s)"
-            
-            # 为 amd64 架构创建临时标签
-            docker tag $AMD64_ID $TEMP_AMD64_TAG
-            
-            # 为 arm64 架构创建临时标签
-            docker tag $ARM64_ID $TEMP_ARM64_TAG
-            
-            # 推送各个架构的镜像到Docker Hub
-            echo "Pushing amd64 image with temporary tag: $TEMP_AMD64_TAG"
-            docker push $TEMP_AMD64_TAG
-            
-            echo "Pushing arm64 image with temporary tag: $TEMP_ARM64_TAG"
-            docker push $TEMP_ARM64_TAG
-            
-            # 创建多架构 manifest
-            echo "Creating multi-arch manifest for tag: $tag"
-            docker manifest create $tag $TEMP_AMD64_TAG $TEMP_ARM64_TAG
-            
-            # 推送到 Docker Hub
-            echo "Pushing multi-arch manifest for tag: $tag"
-            docker manifest push $tag
-            
-            # 删除Docker Hub上的临时镜像
-            echo "Deleting temporary images from Docker Hub"
-            # 提取临时标签名（去掉仓库前缀）
-            TEMP_AMD64_TAG_NAME=$(echo $TEMP_AMD64_TAG | sed 's/.*\///')
-            TEMP_ARM64_TAG_NAME=$(echo $TEMP_ARM64_TAG | sed 's/.*\///')
-            
-            curl -X DELETE \
-              -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
-              "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/$TEMP_AMD64_TAG_NAME/" || echo "Failed to delete amd64 temp tag"
-            
-            curl -X DELETE \
-              -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
-              "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/$TEMP_ARM64_TAG_NAME/" || echo "Failed to delete arm64 temp tag"
-            
-            # 清理本地临时标签
-            docker rmi $TEMP_AMD64_TAG $TEMP_ARM64_TAG
-            
-            echo "Successfully created multi-arch manifest: $tag"
-            echo "Temporary images have been deleted from Docker Hub"
-          done
 
       - name: Verify multi-arch manifest
         run: |
-          TAGS="${{ needs.build-amd64.outputs.tags }}"
+          TAGS="${{ steps.meta.outputs.tags }}"
           for tag in $TAGS; do
             echo "Verifying manifest for $tag"
             
