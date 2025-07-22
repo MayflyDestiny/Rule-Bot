@@ -221,16 +221,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    networks:
-      - rule-bot-network
-
-networks:
-  rule-bot-network:
-    driver: bridge
-
-volumes:
-  data:
-  logs:
 ```
 
 #### 2. 启动服务
