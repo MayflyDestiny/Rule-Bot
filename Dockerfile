@@ -71,7 +71,9 @@ COPY start.sh .
 # 编译所有 Python 文件为字节码，删除源码
 RUN python -m compileall -b src/ && \
     find src/ -name "*.py" -delete && \
-    chmod +x start.sh
+    chmod +x start.sh && \
+    # 确保 __pycache__ 目录存在且可访问
+    find src/ -name "__pycache__" -type d -exec chmod 755 {} \;
 
 # 创建必要目录
 RUN mkdir -p /app/data /app/logs

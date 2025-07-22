@@ -7,4 +7,4 @@ mkdir -p /app/logs
 
 # Start the application
 cd /app
-./rule-bot 
+python -m src.main 
