@@ -26,20 +26,21 @@ env:
   IMAGE_NAME: aethersailor/rule-bot
 
 jobs:
-  build:
+  # Job 1: 构建 amd64 架构
+  build-amd64:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
-    # 移除矩阵策略，改为单次构建所有架构
-    # 这样可以确保多架构 manifest 正确创建
+    outputs:
+      image-name: ${{ steps.meta.outputs.image-name }}
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # 启用浅克隆，减少下载时间
           fetch-depth: 1
 
       - name: Set up Docker Buildx
@@ -71,66 +72,167 @@ jobs:
             org.opencontainers.image.description=Telegram bot for rule management
             org.opencontainers.image.vendor=AetherSailor
 
-      - name: Build and push Docker image
+      - name: Build amd64 image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          push: false
+          outputs: type=docker,dest=/tmp/amd64.tar
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_STEP_LOG_MAX_SIZE=10485760
             BUILDKIT_STEP_LOG_MAX_SPEED=10485760
-          # 临时禁用缓存，避免 GitHub Actions 缓存服务问题
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-          # 确保多架构 manifest 正确创建
           provenance: false
 
-      # 添加构建完成通知
-      - name: Build Summary
-        if: always()
+      - name: Upload amd64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amd64-image
+          path: /tmp/amd64.tar
+
+  # Job 2: 构建 arm64 架构
+  build-arm64:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
+            network=host
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build arm64 image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          outputs: type=docker,dest=/tmp/arm64.tar
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILDKIT_STEP_LOG_MAX_SIZE=10485760
+            BUILDKIT_STEP_LOG_MAX_SPEED=10485760
+          provenance: false
+
+      - name: Upload arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm64-image
+          path: /tmp/arm64.tar
+
+  # Job 3: 合并架构并推送到 Docker Hub
+  push-multiarch:
+    runs-on: ubuntu-latest
+    needs: [build-amd64, build-arm64]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.0
+            network=host
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Download amd64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: amd64-image
+          path: /tmp
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: arm64-image
+          path: /tmp
+
+      - name: Load images
         run: |
-          echo "Build completed for all platforms"
-          echo "Event: ${{ github.event_name }}"
-          echo "Ref: ${{ github.ref }}"
+          docker load --input /tmp/amd64.tar
+          docker load --input /tmp/arm64.tar
+
+      - name: Create and push multi-arch manifest
+        run: |
+          # 获取镜像标签
+          TAGS="${{ needs.build-amd64.outputs.tags }}"
           
-      # 验证多架构 manifest 创建
+          # 为每个架构创建标签
+          for tag in $TAGS; do
+            # 为 amd64 架构创建标签
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64 $tag-amd64
+            
+            # 为 arm64 架构创建标签
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64 $tag-arm64
+            
+            # 创建多架构 manifest
+            docker manifest create $tag $tag-amd64 $tag-arm64
+            
+            # 推送到 Docker Hub
+            docker manifest push $tag
+          done
+
       - name: Verify multi-arch manifest
         run: |
-          echo "Verifying manifest for ${{ steps.meta.outputs.tags }}"
-          
-          # 等待 manifest 创建完成
-          sleep 30
-          
-          # 检查 manifest 是否包含所有架构
-          MANIFEST_OUTPUT=$(docker manifest inspect ${{ steps.meta.outputs.tags }} 2>/dev/null || echo "{}")
-          echo "Manifest content: $MANIFEST_OUTPUT"
-          
-          # 检查架构数量
-          ARCH_COUNT=$(echo "$MANIFEST_OUTPUT" | grep -o '"architecture"' | wc -l)
-          echo "Found $ARCH_COUNT architectures in manifest"
-          
-          # 检查具体架构
-          echo "Checking specific architectures..."
-          if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "amd64"'; then
-            echo "✅ amd64 architecture found"
-          else
-            echo "❌ amd64 architecture missing"
-          fi
-          
-          if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "arm64"'; then
-            echo "✅ arm64 architecture found"
-          else
-            echo "❌ arm64 architecture missing"
-          fi
-          
-          if [ "$ARCH_COUNT" -lt 2 ]; then
-            echo "Warning: Not all architectures found in manifest"
-            echo "This might indicate a push or merge issue"
-            exit 1
-          else
-            echo "Success: All architectures found in manifest"
-          fi
+          TAGS="${{ needs.build-amd64.outputs.tags }}"
+          for tag in $TAGS; do
+            echo "Verifying manifest for $tag"
+            
+            # 等待 manifest 创建完成
+            sleep 30
+            
+            # 检查 manifest 是否包含所有架构
+            MANIFEST_OUTPUT=$(docker manifest inspect $tag 2>/dev/null || echo "{}")
+            echo "Manifest content: $MANIFEST_OUTPUT"
+            
+            # 检查架构数量
+            ARCH_COUNT=$(echo "$MANIFEST_OUTPUT" | grep -o '"architecture"' | wc -l)
+            echo "Found $ARCH_COUNT architectures in manifest"
+            
+            # 检查具体架构
+            echo "Checking specific architectures..."
+            if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "amd64"'; then
+              echo "✅ amd64 architecture found"
+            else
+              echo "❌ amd64 architecture missing"
+            fi
+            
+            if echo "$MANIFEST_OUTPUT" | grep -q '"architecture": "arm64"'; then
+              echo "✅ arm64 architecture found"
+            else
+              echo "❌ arm64 architecture missing"
+            fi
+            
+            if [ "$ARCH_COUNT" -lt 2 ]; then
+              echo "Warning: Not all architectures found in manifest"
+              echo "This might indicate a push or merge issue"
+              exit 1
+            else
+              echo "Success: All architectures found in manifest"
+            fi
+          done
