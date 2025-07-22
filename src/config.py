@@ -25,7 +25,7 @@ class Config:
         self.PROXY_RULE_FILE = os.getenv("PROXY_RULE_FILE", "")  # 可选，暂未启用
         
         # 日志配置
-        self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+        self.LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING")
         
         # 群组验证配置
         self.REQUIRED_GROUP_ID = os.getenv("REQUIRED_GROUP_ID", "")

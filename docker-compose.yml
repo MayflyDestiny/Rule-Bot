@@ -26,8 +26,7 @@ services:
       # 提交者名称固定为 Rule-Bot，邮箱可自定义
       # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
       
-      # 日志级别 (可选: DEBUG, INFO, WARNING, ERROR)
-      - LOG_LEVEL=INFO
+
       
       # 群组验证 (可选: 要求用户加入指定群组才能使用机器人)
       # 留空则关闭此功能

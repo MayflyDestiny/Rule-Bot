@@ -28,7 +28,7 @@ services:
       # 可选配置参数
       # - PROXY_RULE_FILE=your_proxy_rule_file_path
       # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
-      - LOG_LEVEL=INFO
+
       # - REQUIRED_GROUP_ID=your_group_id_here
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
@@ -207,8 +207,7 @@ services:
       # 提交者名称固定为 Rule-Bot，邮箱可自定义
       # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
       
-      # 日志级别 (可选: DEBUG, INFO, WARNING, ERROR)
-      - LOG_LEVEL=INFO
+
       
       # 群组验证 (可选: 要求用户加入指定群组才能使用机器人)
       # 留空则关闭此功能
@@ -344,7 +343,7 @@ docker pull aethersailor/rule-bot:v1.0.0
 | **可选参数** | | | | |
 | `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rule/Custom_Proxy.list` | 不填写 |
 | `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` | 系统默认 |
-| `LOG_LEVEL` | 可选 | 日志级别 | `INFO` | `INFO` |
+
 | `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1002413971610` | 不填写 |
 | `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `Custom_OpenClash_Rules | 交流群` | 不填写 |
 | `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/custom_openclash_rules_group` | 不填写 |
@@ -397,9 +396,8 @@ environment:
   - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
   
-  # 可选参数（可以不填写，使用默认值）
-  # - LOG_LEVEL=INFO  # 默认值
-  # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 暂不使用
+      # 可选参数（可以不填写，使用默认值）
+    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 暂不使用
   # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 使用系统默认
   # - REQUIRED_GROUP_ID=-1002413971610  # 群组验证默认关闭
   # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
@@ -415,9 +413,8 @@ environment:
   - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
   
-  # 可选参数（根据需要选择填写）
-  - LOG_LEVEL=INFO  # 日志级别
-  # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 代理规则（暂不使用）
+      # 可选参数（根据需要选择填写）
+    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 代理规则（暂不使用）
   # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 自定义邮箱
   
   # 群组验证（需要同时配置三个参数才生效）
