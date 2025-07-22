@@ -162,10 +162,18 @@ jobs:
 
       - name: Load images
         run: |
+          echo "Loading amd64 image..."
           docker load --input /tmp/amd64.tar
+          echo "Loading arm64 image..."
           docker load --input /tmp/arm64.tar
           echo "Available images after loading:"
           docker images
+          echo ""
+          echo "Images with aethersailor/rule-bot:"
+          docker images | grep "aethersailor/rule-bot"
+          echo ""
+          echo "All images with platform info:"
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"
 
       - name: Debug information
         run: |
@@ -190,28 +198,27 @@ jobs:
           for tag in $TAGS; do
             echo "Processing tag: $tag"
             
-            # 查找加载的镜像
-            AMD64_IMAGE=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "aethersailor/rule-bot" | grep "amd64" | head -1)
-            ARM64_IMAGE=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "aethersailor/rule-bot" | grep "arm64" | head -1)
+            # 查找加载的镜像 - 使用镜像 ID 来区分
+            IMAGE_IDS=$(docker images --format "{{.ID}}" | grep -v "<none>")
+            echo "Available image IDs: $IMAGE_IDS"
             
-            echo "Found amd64 image: $AMD64_IMAGE"
-            echo "Found arm64 image: $ARM64_IMAGE"
+            # 获取第一个和第二个镜像 ID（假设第一个是 amd64，第二个是 arm64）
+            AMD64_ID=$(echo "$IMAGE_IDS" | head -1)
+            ARM64_ID=$(echo "$IMAGE_IDS" | tail -1)
             
-            if [ -z "$AMD64_IMAGE" ]; then
-              echo "Error: amd64 image not found!"
-              exit 1
-            fi
+            echo "Using amd64 image ID: $AMD64_ID"
+            echo "Using arm64 image ID: $ARM64_ID"
             
-            if [ -z "$ARM64_IMAGE" ]; then
-              echo "Error: arm64 image not found!"
+            if [ -z "$AMD64_ID" ] || [ -z "$ARM64_ID" ]; then
+              echo "Error: Not enough images found!"
               exit 1
             fi
             
             # 为 amd64 架构创建标签
-            docker tag $AMD64_IMAGE $tag-amd64
+            docker tag $AMD64_ID $tag-amd64
             
             # 为 arm64 架构创建标签
-            docker tag $ARM64_IMAGE $tag-arm64
+            docker tag $ARM64_ID $tag-arm64
             
             # 先推送各个架构的镜像
             echo "Pushing amd64 image for tag: $tag"
