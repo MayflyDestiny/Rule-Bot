@@ -46,7 +46,7 @@ class HandlerManager:
         # 用户限制管理
         self.user_add_history: Dict[int, list] = defaultdict(list)  # 用户添加历史 {user_id: [timestamp1, timestamp2, ...]}
         self.MAX_DESCRIPTION_LENGTH = 20  # 域名说明最大字符数
-        self.MAX_ADDS_PER_HOUR = 5  # 每小时最多添加域名数
+        self.MAX_ADDS_PER_HOUR = 50  # 每小时最多添加域名数
     
     def get_user_state(self, user_id: int) -> Dict[str, Any]:
         """获取用户状态"""
