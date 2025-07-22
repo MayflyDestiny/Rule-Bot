@@ -258,12 +258,25 @@ jobs:
             echo "Pushing multi-arch manifest for tag: $tag"
             docker manifest push $tag
             
+            # 删除Docker Hub上的临时镜像
+            echo "Deleting temporary images from Docker Hub"
+            # 提取临时标签名（去掉仓库前缀）
+            TEMP_AMD64_TAG_NAME=$(echo $TEMP_AMD64_TAG | sed 's/.*\///')
+            TEMP_ARM64_TAG_NAME=$(echo $TEMP_ARM64_TAG | sed 's/.*\///')
+            
+            curl -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+              "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/$TEMP_AMD64_TAG_NAME/" || echo "Failed to delete amd64 temp tag"
+            
+            curl -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.DOCKERHUB_TOKEN }}" \
+              "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/$TEMP_ARM64_TAG_NAME/" || echo "Failed to delete arm64 temp tag"
+            
             # 清理本地临时标签
             docker rmi $TEMP_AMD64_TAG $TEMP_ARM64_TAG
             
             echo "Successfully created multi-arch manifest: $tag"
-            echo "Note: Temporary images ($TEMP_AMD64_TAG, $TEMP_ARM64_TAG) remain in Docker Hub"
-            echo "You can manually delete them if desired, or they will be cleaned up by Docker Hub's retention policy"
+            echo "Temporary images have been deleted from Docker Hub"
           done
 
       - name: Verify multi-arch manifest
