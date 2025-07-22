@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Create data directories if they don't exist
 mkdir -p /app/data/geoip
