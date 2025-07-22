@@ -32,9 +32,7 @@ services:
       # - REQUIRED_GROUP_ID=your_group_id_here
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+
 EOF
 ```
 
@@ -114,7 +112,8 @@ docker compose up -d
 - ✅ Docker 部署：完整的 Docker Compose 配置
 - ✅ 环境配置：通过环境变量进行配置
 - ✅ 自动重启：容器异常时自动重启
-- ✅ 日志记录：详细的操作日志
+- ✅ 日志记录：详细的操作日志（输出到 stderr）
+- ✅ 无状态设计：使用临时目录，无需持久化存储
 
 ## ⚙️ 配置选项
 
@@ -217,10 +216,6 @@ services:
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
       
-
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
 ```
 
 #### 2. 启动服务
@@ -268,9 +263,9 @@ docker run -d \
   # -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
   # -e GITHUB_COMMIT_EMAIL="your-custom-email@example.com" \
   -e LOG_LEVEL="INFO" \
-  -e REQUIRED_GROUP_ID="your_group_id_here" \
-  -e REQUIRED_GROUP_NAME="Your Group Name" \
-  -e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
+  #-e REQUIRED_GROUP_ID="your_group_id_here" \
+  #-e REQUIRED_GROUP_NAME="Your Group Name" \
+  #-e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
   aethersailor/rule-bot:latest
 ```
 
@@ -320,8 +315,7 @@ docker pull aethersailor/rule-bot:v1.0.0
 #### 支持的架构
 - ✅ `linux/amd64` (x86_64)
 - ✅ `linux/arm64` (ARM64)
-- ✅ `linux/arm/v7` (ARMv7)
-- ✅ `linux/386` (x86)
+
 
 ### ⚙️ 配置说明
 
@@ -611,7 +605,14 @@ Copyright (c) 2024 AetherSailor
 <details>
 <summary>点击展开查看更新日志</summary>
 
-### v0.1.0 (当前版本)
+### v0.1.1 (当前版本)
+- 🚀 提升用户体验：将用户添加域名限制从每小时 5 个提升到 50 个
+- 🔧 优化 Docker 构建配置，提升构建性能
+- 📝 更新 README 文档，移除无用的 volumes 配置
+- 🏗️ 改进代码结构和性能优化
+- 🔄 优化数据管理模块，使用临时目录存储
+
+### v0.1.0
 - 🎉 初始版本发布
 - ✅ 支持域名查询和添加直连规则
 - ✅ 自动 GeoIP/GeoSite 数据更新
@@ -624,9 +625,10 @@ Copyright (c) 2024 AetherSailor
 
 ### 技术特性
 - 多阶段 Docker 构建优化
-- 支持 linux/amd64, linux/arm64, linux/arm/v7, linux/386 架构
+- 支持 linux/amd64, linux/arm64 架构
 - 智能缓存策略和构建性能优化
 - 完整的错误处理和日志系统
 - 模块化代码设计
+- 无状态容器设计，无需持久化存储
 
 </details> 
