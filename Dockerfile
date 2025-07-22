@@ -81,11 +81,11 @@ RUN mkdir -p /app/data /app/logs
 RUN addgroup -g 1000 appuser && \
     adduser -D -s /bin/sh -u 1000 -G appuser appuser && \
     chown -R appuser:appuser /app && \
-    chmod +x start.sh && \
-    # 确保数据目录有正确的权限
-    mkdir -p /app/data/geoip /app/data/geosite && \
-    chown -R appuser:appuser /app/data
+    chmod +x start.sh
 USER appuser
+
+# 在用户切换后创建目录，确保权限正确
+RUN mkdir -p /app/data/geoip /app/data/geosite /app/logs
 
 # 健康检查（暂时禁用，因为应用可能没有健康检查端点）
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
