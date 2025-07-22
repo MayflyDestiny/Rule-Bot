@@ -198,19 +198,40 @@ jobs:
           for tag in $TAGS; do
             echo "Processing tag: $tag"
             
-            # 查找加载的镜像 - 使用镜像 ID 来区分
+            # 查找加载的镜像 - 使用架构信息来正确识别
+            echo "Checking image architectures..."
+            
+            # 获取所有镜像的详细信息
+            docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Digest}}" | grep "aethersailor/rule-bot"
+            
+            # 使用 docker inspect 来获取架构信息
             IMAGE_IDS=$(docker images --format "{{.ID}}" | grep -v "<none>")
-            echo "Available image IDs: $IMAGE_IDS"
+            AMD64_ID=""
+            ARM64_ID=""
             
-            # 获取第一个和第二个镜像 ID（假设第一个是 amd64，第二个是 arm64）
-            AMD64_ID=$(echo "$IMAGE_IDS" | head -1)
-            ARM64_ID=$(echo "$IMAGE_IDS" | tail -1)
+            for img_id in $IMAGE_IDS; do
+              ARCH=$(docker inspect $img_id --format='{{.Architecture}}')
+              echo "Image $img_id has architecture: $ARCH"
+              
+              if [ "$ARCH" = "amd64" ]; then
+                AMD64_ID=$img_id
+                echo "Found amd64 image: $img_id"
+              elif [ "$ARCH" = "arm64" ]; then
+                ARM64_ID=$img_id
+                echo "Found arm64 image: $img_id"
+              fi
+            done
             
-            echo "Using amd64 image ID: $AMD64_ID"
-            echo "Using arm64 image ID: $ARM64_ID"
+            echo "Final amd64 image ID: $AMD64_ID"
+            echo "Final arm64 image ID: $ARM64_ID"
             
-            if [ -z "$AMD64_ID" ] || [ -z "$ARM64_ID" ]; then
-              echo "Error: Not enough images found!"
+            if [ -z "$AMD64_ID" ]; then
+              echo "Error: amd64 image not found!"
+              exit 1
+            fi
+            
+            if [ -z "$ARM64_ID" ]; then
+              echo "Error: arm64 image not found!"
               exit 1
             fi
             
