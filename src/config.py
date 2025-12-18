@@ -33,7 +33,8 @@ class Config:
         self.REQUIRED_GROUP_LINK = os.getenv("REQUIRED_GROUP_LINK", "")
         
         # 数据源URL
-        self.GEOIP_URL = "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/geoip.dat"
+        # 使用 MaxMind GeoLite2-Country 数据库（通过 GitHub 镜像）
+        self.GEOIP_URL = "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
         self.GEOSITE_URL = "https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/refs/heads/release/direct-list.txt"
         
         # DoH服务器配置
