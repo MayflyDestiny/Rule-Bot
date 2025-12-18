@@ -1,0 +1,82 @@
+import unittest
+from unittest.mock import MagicMock, AsyncMock, patch
+import sys
+import os
+import asyncio
+import base64
+
+# Add src to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from services.dns_service import DNSService
+from services.github_service import GitHubService
+from config import Config
+
+class TestServices(unittest.IsolatedAsyncioTestCase):
+    async def test_dns_service_lifecycle(self):
+        print("\nTesting DNSService lifecycle...")
+        service = DNSService({'google': 'https://dns.google/dns-query'})
+        
+        # Test start
+        await service.start()
+        self.assertIsNotNone(service.session)
+        self.assertFalse(service.session.closed)
+        print("DNSService started successfully, session created.")
+        
+        # Test close
+        await service.close()
+        self.assertTrue(service.session.closed)
+        print("DNSService closed successfully.")
+
+    async def test_github_service_async_wrapper(self):
+        print("\nTesting GitHubService async wrapper...")
+        config = MagicMock(spec=Config)
+        service = GitHubService(config)
+        service.repo = MagicMock()
+        
+        # Mock get_contents to return a mock file content
+        file_content_str = "test content"
+        encoded_content = base64.b64encode(file_content_str.encode('utf-8')).decode('utf-8')
+        
+        mock_content = MagicMock()
+        mock_content.content = encoded_content
+        service.repo.get_contents.return_value = mock_content
+        
+        # Test async get_rule_file_content
+        content = await service.get_rule_file_content("test.txt")
+        self.assertEqual(content, file_content_str)
+        print(f"Async get_rule_file_content returned correct content: {content}")
+        
+    async def test_github_service_add_domain_wrapper(self):
+        print("\nTesting GitHubService add_domain wrapper...")
+        config = MagicMock(spec=Config)
+        config.DIRECT_RULE_FILE = "rule.list"
+        config.GITHUB_REPO = "test/repo"
+        config.GITHUB_COMMIT_NAME = "bot"
+        config.GITHUB_COMMIT_EMAIL = "bot@test.com"
+        
+        service = GitHubService(config)
+        service.repo = MagicMock()
+        
+        # Mock existing content
+        existing_content = "# initial\n"
+        encoded_content = base64.b64encode(existing_content.encode('utf-8')).decode('utf-8')
+        mock_file = MagicMock()
+        mock_file.content = encoded_content
+        mock_file.sha = "old_sha"
+        service.repo.get_contents.return_value = mock_file
+        
+        # Mock update_file
+        mock_commit = MagicMock()
+        mock_commit.sha = "new_sha"
+        service.repo.update_file.return_value = {'commit': mock_commit}
+        
+        # Test async add_domain_to_rules
+        result = await service.add_domain_to_rules("example.com", "user", "desc")
+        
+        self.assertTrue(result["success"])
+        self.assertEqual(result["commit_sha"], "new_sha")
+        print("Async add_domain_to_rules executed successfully.")
+
+if __name__ == '__main__':
+    unittest.main()

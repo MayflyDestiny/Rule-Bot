@@ -3,6 +3,7 @@ GitHub服务模块
 用于操作GitHub上的规则文件
 """
 
+import asyncio
 import base64
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -83,7 +84,8 @@ class GitHubService:
         """获取规则文件内容"""
         try:
             logger.debug(f"正在获取文件内容: {file_path}")
-            file_content = self.repo.get_contents(file_path)
+            # 使用 asyncio.to_thread 在线程池中执行阻塞IO
+            file_content = await asyncio.to_thread(self.repo.get_contents, file_path)
             content = base64.b64decode(file_content.content).decode('utf-8')
             logger.debug(f"成功获取文件内容: {file_path}, 长度: {len(content)} 字符")
             return content
@@ -104,28 +106,33 @@ class GitHubService:
             if not content:
                 return {"exists": False, "details": []}
             
-            lines = content.split('\n')
-            domain_lower = domain.lower()
-            found_rules = []
-            
-            for line_num, line in enumerate(lines, 1):
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    # 检查 DOMAIN-SUFFIX 格式
-                    if line.startswith('DOMAIN-SUFFIX,'):
-                        rule_domain = line[14:].strip().lower()
-                        if rule_domain == domain_lower:
-                            found_rules.append({
-                                "line": line_num,
-                                "rule": line,
-                                "type": "exact_match"
-                            })
-                        elif domain_lower.endswith('.' + rule_domain):
-                            found_rules.append({
-                                "line": line_num,
-                                "rule": line,
-                                "type": "suffix_match"
-                            })
+            # CPU密集型操作也在线程池中执行，避免阻塞事件循环
+            def _process_content():
+                lines = content.split('\n')
+                domain_lower = domain.lower()
+                found_rules = []
+                
+                for line_num, line in enumerate(lines, 1):
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        # 检查 DOMAIN-SUFFIX 格式
+                        if line.startswith('DOMAIN-SUFFIX,'):
+                            rule_domain = line[14:].strip().lower()
+                            if rule_domain == domain_lower:
+                                found_rules.append({
+                                    "line": line_num,
+                                    "rule": line,
+                                    "type": "exact_match"
+                                })
+                            elif domain_lower.endswith('.' + rule_domain):
+                                found_rules.append({
+                                    "line": line_num,
+                                    "rule": line,
+                                    "type": "suffix_match"
+                                })
+                return found_rules
+
+            found_rules = await asyncio.to_thread(_process_content)
             
             return {
                 "exists": len(found_rules) > 0,
@@ -158,75 +165,82 @@ class GitHubService:
                 logger.error(error_msg)
                 return {"success": False, "error": error_msg}
             
-            # 查找插入位置
-            lines = content.split('\n')
-            insert_index = -1
+            # 在线程中处理文件内容修改逻辑
+            def _prepare_update():
+                # 查找插入位置
+                lines = content.split('\n')
+                insert_index = -1
+                
+                for i, line in enumerate(lines):
+                    if "# 以下域名待提交 PR" in line:
+                        insert_index = i + 1
+                        break
+                
+                if insert_index == -1:
+                    # 如果没找到标记，添加到文件末尾
+                    insert_index = len(lines)
+                    lines.append("# 以下域名待提交 PR")
+                    insert_index += 1
+                
+                # 构建新规则
+                # 使用北京时间（UTC+8）
+                from datetime import timezone, timedelta
+                beijing_tz = timezone(timedelta(hours=8))
+                current_date = datetime.now(beijing_tz).strftime("%Y-%m-%d %H:%M:%S")
+                
+                # 验证参数
+                if not domain or not isinstance(domain, str) or len(domain.strip()) == 0:
+                    return None, f"无效的域名格式: {domain}"
+                
+                if not user_name or not isinstance(user_name, str) or len(user_name.strip()) == 0:
+                    return None, f"无效的用户名格式: {user_name}"
+                
+                if description:
+                    comment = f"# {description} / add by Telegram user: {user_name} / Date: {current_date}"
+                else:
+                    comment = f"# add by Telegram user: {user_name} / Date: {current_date}"
+                
+                rule = f"DOMAIN-SUFFIX,{domain}"
+                
+                # 插入新规则
+                lines.insert(insert_index, comment)
+                lines.insert(insert_index + 1, rule)
+                
+                # 重新组合内容
+                new_content = '\n'.join(lines)
+                
+                commit_title = f"Add direct domain {domain} by Telegram Bot (Telegram user: {user_name})"
+                commit_body = description if description else ""
+                full_commit_message = commit_title
+                if commit_body.strip():
+                    full_commit_message += f"\n\n{commit_body}"
+                    
+                return (new_content, full_commit_message), None
+
+            result, error = await asyncio.to_thread(_prepare_update)
+            if error:
+                logger.error(error)
+                return {"success": False, "error": error}
             
-            for i, line in enumerate(lines):
-                if "# 以下域名待提交 PR" in line:
-                    insert_index = i + 1
-                    break
+            new_content, full_commit_message = result
             
-            if insert_index == -1:
-                # 如果没找到标记，添加到文件末尾
-                insert_index = len(lines)
-                lines.append("# 以下域名待提交 PR")
-                insert_index += 1
+            logger.debug(f"准备提交更改: {full_commit_message.splitlines()[0]}")
             
-            # 构建新规则
-            # 使用北京时间（UTC+8）
-            from datetime import timezone, timedelta
-            beijing_tz = timezone(timedelta(hours=8))
-            current_date = datetime.now(beijing_tz).strftime("%Y-%m-%d %H:%M:%S")
-            
-            # 验证参数
-            if not domain or not isinstance(domain, str) or len(domain.strip()) == 0:
-                error_msg = f"无效的域名格式: {domain}"
-                logger.error(error_msg)
-                return {"success": False, "error": error_msg}
-            
-            if not user_name or not isinstance(user_name, str) or len(user_name.strip()) == 0:
-                error_msg = f"无效的用户名格式: {user_name}"
-                logger.error(error_msg)
-                return {"success": False, "error": error_msg}
-            
-            if description:
-                comment = f"# {description} / add by Telegram user: {user_name} / Date: {current_date}"
-            else:
-                comment = f"# add by Telegram user: {user_name} / Date: {current_date}"
-            
-            rule = f"DOMAIN-SUFFIX,{domain}"
-            
-            # 插入新规则
-            lines.insert(insert_index, comment)
-            lines.insert(insert_index + 1, rule)
-            
-            # 重新组合内容
-            new_content = '\n'.join(lines)
-            
-            # 提交更改
-            commit_title = f"Add direct domain {domain} by Telegram Bot (Telegram user: {user_name})"
-            commit_body = description if description else ""
-            
-            logger.debug(f"准备提交更改: {commit_title}")
-            file_content = self.repo.get_contents(file_path)
-            logger.debug(f"获取到文件对象，准备更新文件")
-            
-            # 构造完整的 commit 消息（标题 + 描述）
-            full_commit_message = commit_title
-            if commit_body.strip():
-                full_commit_message += f"\n\n{commit_body}"
-            
-            commit_result = self.repo.update_file(
-                file_path,
-                full_commit_message,
-                new_content,
-                file_content.sha,
-                committer=InputGitAuthor(
-                    name=self.config.GITHUB_COMMIT_NAME,
-                    email=self.config.GITHUB_COMMIT_EMAIL
+            # 在线程中执行GitHub API调用
+            def _perform_commit():
+                file_content = self.repo.get_contents(file_path)
+                return self.repo.update_file(
+                    file_path,
+                    full_commit_message,
+                    new_content,
+                    file_content.sha,
+                    committer=InputGitAuthor(
+                        name=self.config.GITHUB_COMMIT_NAME,
+                        email=self.config.GITHUB_COMMIT_EMAIL
+                    )
                 )
-            )
+
+            commit_result = await asyncio.to_thread(_perform_commit)
             
             # 构建 commit 链接
             commit_sha = commit_result['commit'].sha
@@ -269,36 +283,46 @@ class GitHubService:
             if content is None:
                 return {"success": False, "error": "无法获取文件内容"}
             
-            lines = content.split('\n')
-            domain_lower = domain.lower()
-            removed_lines = []
-            new_lines = []
-            
-            i = 0
-            while i < len(lines):
-                line = lines[i].strip()
+            # 在线程中处理文件内容修改逻辑
+            def _prepare_removal():
+                lines = content.split('\n')
+                domain_lower = domain.lower()
+                removed_lines = []
+                new_lines = []
                 
-                # 检查是否是要删除的域名规则
-                if line.startswith('DOMAIN-SUFFIX,'):
-                    rule_domain = line[14:].strip().lower()
-                    if rule_domain == domain_lower:
-                        # 找到要删除的规则
-                        removed_lines.append(line)
-                        
-                        # 检查前一行是否是相关注释
-                        if i > 0 and lines[i-1].strip().startswith('#'):
-                            # 删除注释行
-                            removed_lines.append(lines[i-1].strip())
-                            new_lines.pop()  # 移除已添加的注释行
-                        
-                        i += 1  # 跳过当前规则行
-                        continue
+                i = 0
+                while i < len(lines):
+                    line = lines[i].strip()
+                    
+                    # 检查是否是要删除的域名规则
+                    if line.startswith('DOMAIN-SUFFIX,'):
+                        rule_domain = line[14:].strip().lower()
+                        if rule_domain == domain_lower:
+                            # 找到要删除的规则
+                            removed_lines.append(line)
+                            
+                            # 检查前一行是否是相关注释
+                            if i > 0 and lines[i-1].strip().startswith('#'):
+                                # 删除注释行
+                                removed_lines.append(lines[i-1].strip())
+                                new_lines.pop()  # 移除已添加的注释行
+                            
+                            i += 1  # 跳过当前规则行
+                            continue
+                    
+                    new_lines.append(lines[i])
+                    i += 1
                 
-                new_lines.append(lines[i])
-                i += 1
+                if not removed_lines:
+                    return None, "未找到指定域名的规则"
+                
+                return (new_lines, removed_lines), None
+
+            result, error = await asyncio.to_thread(_prepare_removal)
+            if error:
+                return {"success": False, "error": error}
             
-            if not removed_lines:
-                return {"success": False, "error": "未找到指定域名的规则"}
+            new_lines, removed_lines = result
             
             # 重新组合内容
             new_content = '\n'.join(new_lines)
@@ -306,17 +330,20 @@ class GitHubService:
             # 提交更改
             commit_message = f"Remove direct domain {domain} by Telegram Bot (@{user_name})"
             
-            file_content = self.repo.get_contents(file_path)
-            commit_result = self.repo.update_file(
-                file_path,
-                commit_message,
-                new_content,
-                file_content.sha,
-                committer=InputGitAuthor(
-                    name=self.config.GITHUB_COMMIT_NAME,
-                    email=self.config.GITHUB_COMMIT_EMAIL
+            def _perform_commit():
+                file_content = self.repo.get_contents(file_path)
+                return self.repo.update_file(
+                    file_path,
+                    commit_message,
+                    new_content,
+                    file_content.sha,
+                    committer=InputGitAuthor(
+                        name=self.config.GITHUB_COMMIT_NAME,
+                        email=self.config.GITHUB_COMMIT_EMAIL
+                    )
                 )
-            )
+
+            commit_result = await asyncio.to_thread(_perform_commit)
             
             # 构建 commit 链接
             commit_sha = commit_result['commit'].sha

@@ -26,6 +26,16 @@ class RuleBot:
         self.app: Optional[Application] = None
         self.handler_manager = None  # 延迟初始化
     
+    async def stop(self):
+        """停止机器人"""
+        logger.info("正在停止机器人...")
+        if self.handler_manager:
+            await self.handler_manager.stop()
+        if self.app:
+            await self.app.stop()
+            await self.app.shutdown()
+        logger.info("机器人已停止")
+
     def start(self):
         """启动机器人"""
         try:
@@ -45,14 +55,18 @@ class RuleBot:
             import asyncio
             
             async def run_bot():
-                async with self.app:
-                    await self.app.start()
-                    await self.app.updater.start_polling(
-                        allowed_updates=Update.ALL_TYPES,
-                        drop_pending_updates=True  # 丢弃待处理的更新，避免发送旧消息
-                    )
-                    # 保持运行
-                    await asyncio.Event().wait()
+                try:
+                    async with self.app:
+                        await self.handler_manager.start()  # 显式启动服务（如DNS Session）
+                        await self.app.start()
+                        await self.app.updater.start_polling(
+                            allowed_updates=Update.ALL_TYPES,
+                            drop_pending_updates=True  # 丢弃待处理的更新，避免发送旧消息
+                        )
+                        # 保持运行
+                        await asyncio.Event().wait()
+                finally:
+                    await self.stop()
             
             # 使用新的事件循环运行
             asyncio.run(run_bot())

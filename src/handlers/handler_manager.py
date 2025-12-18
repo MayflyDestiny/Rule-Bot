@@ -39,6 +39,11 @@ class HandlerManager:
         self.group_service = None
         if application:
             self.group_service = GroupService(config, application.bot)
+
+    async def start(self):
+        """启动服务"""
+        if self.dns_service:
+            await self.dns_service.start()
         
         # 用户状态管理
         self.user_states: Dict[int, Dict[str, Any]] = {}
@@ -47,6 +52,12 @@ class HandlerManager:
         self.user_add_history: Dict[int, list] = defaultdict(list)  # 用户添加历史 {user_id: [timestamp1, timestamp2, ...]}
         self.MAX_DESCRIPTION_LENGTH = 20  # 域名说明最大字符数
         self.MAX_ADDS_PER_HOUR = 50  # 每小时最多添加域名数
+
+    async def stop(self):
+        """停止服务"""
+        if self.dns_service:
+            await self.dns_service.close()
+
     
     def get_user_state(self, user_id: int) -> Dict[str, Any]:
         """获取用户状态"""
@@ -1104,4 +1115,6 @@ class HandlerManager:
             
         except Exception as e:
             logger.error(f"添加域名到GitHub失败: {e}")
-            await message.reply_text("添加失败，请重试。") 
+            await message.reply_text("添加失败，请重试。")
+
+ 
