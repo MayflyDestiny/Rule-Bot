@@ -27,7 +27,7 @@ class DataManager:
         # 使用临时目录，不需要持久化
         import tempfile
         self.data_dir = Path(tempfile.gettempdir()) / "rule-bot"
-        self.geoip_file = self.data_dir / "geoip" / "GeoLite2-Country.mmdb"
+        self.geoip_file = self.data_dir / "geoip" / "Country-without-asn.mmdb"
         self.geosite_file = self.data_dir / "geosite" / "direct-list.txt"
         
         # 确保目录存在
