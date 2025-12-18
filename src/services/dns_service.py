@@ -18,10 +18,34 @@ class DNSService:
     def __init__(self, doh_servers: Dict[str, str], ns_doh_servers: Dict[str, str] = None):
         self.doh_servers = doh_servers
         self.ns_doh_servers = ns_doh_servers or doh_servers
+        self.session: Optional[aiohttp.ClientSession] = None
+        
+    async def start(self):
+        """启动DNS服务，初始化共享Session"""
+        if not self.session or self.session.closed:
+            connector = aiohttp.TCPConnector(
+                limit=100,  # 增加连接限制 
+                limit_per_host=10,
+                ttl_dns_cache=300,
+                use_dns_cache=True,
+                ssl=False
+            )
+            self.session = aiohttp.ClientSession(connector=connector)
+            logger.info("DNS服务已启动，Session已初始化")
+
+    async def close(self):
+        """关闭DNS服务"""
+        if self.session and not self.session.closed:
+            await self.session.close()
+            logger.info("DNS服务已关闭，Session已释放")
     
     async def query_a_record(self, domain: str, use_edns_china: bool = True) -> List[str]:
         """查询A记录，返回IP地址列表（并发查询所有DoH服务器）"""
         try:
+            # 确保Session已启动
+            if not self.session or self.session.closed:
+                await self.start()
+
             # 构建DNS查询数据包
             query_data = self._build_dns_query(domain, use_edns_china)
             
@@ -59,6 +83,10 @@ class DNSService:
     async def query_ns_records(self, domain: str) -> List[str]:
         """查询NS记录，返回权威域名服务器列表（并发查询）"""
         try:
+            # 确保Session已启动
+            if not self.session or self.session.closed:
+                await self.start()
+
             # 构建NS查询数据包（不使用EDNS中国客户端，避免被过滤）
             query_data = self._build_dns_query(domain, False, record_type=2)  # NS记录类型为2
             
@@ -106,32 +134,24 @@ class DNSService:
                 encoded_query = base64.urlsafe_b64encode(query_data).decode().rstrip('=')
                 url = f"{server_url}?dns={encoded_query}"
                 
-                connector = aiohttp.TCPConnector(
-                    limit=10,
-                    limit_per_host=5,
-                    ttl_dns_cache=300,
-                    use_dns_cache=True,
-                    ssl=False # 某些环境下可能需要忽略SSL验证，或者使用默认SSL上下文
-                )
-                
-                async with aiohttp.ClientSession(connector=connector) as session:
-                    async with session.get(
-                        url,
-                        headers={
-                            'Accept': 'application/dns-message',
-                            'User-Agent': 'Rule-Bot DNS Client/1.0'
-                        },
-                        timeout=aiohttp.ClientTimeout(total=10, connect=3)
-                    ) as response:
-                        if response.status == 200:
-                            response_data = await response.read()
-                            result = parser_func(response_data)
-                            if result:
-                                return result
-                            # 如果解析结果为空但状态码200，可能是没有该记录，不一定是错误，但也重试一下
-                        else:
-                            # logger.warning(f"{server_name} HTTP error: {response.status}")
-                            pass
+                # 使用共享的session
+                async with self.session.get(
+                    url,
+                    headers={
+                        'Accept': 'application/dns-message',
+                        'User-Agent': 'Rule-Bot DNS Client/1.0'
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10, connect=3)
+                ) as response:
+                    if response.status == 200:
+                        response_data = await response.read()
+                        result = parser_func(response_data)
+                        if result:
+                            return result
+                        # 如果解析结果为空但状态码200，可能是没有该记录，不一定是错误，但也重试一下
+                    else:
+                        # logger.warning(f"{server_name} HTTP error: {response.status}")
+                        pass
                             
             except asyncio.CancelledError:
                 raise # 允许被取消
