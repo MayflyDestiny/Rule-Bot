@@ -85,7 +85,7 @@ jobs:
             BUILDKIT_STEP_LOG_MAX_SPEED=10485760
           provenance: false
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=inline
 
       - name: Verify multi-arch manifest
         run: |
