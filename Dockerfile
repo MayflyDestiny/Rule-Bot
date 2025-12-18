@@ -34,8 +34,8 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt \
     && pip install --no-cache-dir --upgrade pip setuptools wheel \
     || (echo "Wheel build failed, trying with pre-built packages..." && \
-        pip install --no-cache-dir --only-binary=all -r requirements.txt && \
-        pip wheel --no-cache-dir --wheel-dir /wheels --only-binary=all -r requirements.txt)
+    pip install --no-cache-dir --only-binary=all -r requirements.txt && \
+    pip wheel --no-cache-dir --wheel-dir /wheels --only-binary=all -r requirements.txt)
 
 # 运行阶段：使用最小化镜像
 FROM python:3.11-alpine
@@ -64,15 +64,10 @@ COPY --from=builder /wheels /wheels
 # 安装预编译的包（避免编译）
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
-# 复制应用代码并编译为字节码
+# 复制应用代码
 COPY src/ ./src/
 COPY start.sh .
-
-# 编译所有 Python 文件为字节码，删除源码
-RUN python -m compileall -b src/ && \
-    find src/ -name "*.py" -delete && \
-    # 确保 __pycache__ 目录存在且可访问
-    find src/ -name "__pycache__" -type d -exec chmod 755 {} \;
+RUN chmod +x start.sh
 
 # 使用非root用户运行（安全考虑）
 RUN addgroup -g 1000 appuser && \
