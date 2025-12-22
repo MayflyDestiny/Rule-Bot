@@ -210,11 +210,11 @@ class GitHubService:
                 new_content = '\n'.join(lines)
                 
                 # 遵循 Conventional Commits 规范
-                commit_title = f"feat(rules): add {domain}"
-                commit_body = f"Added by @{user_name} via Telegram Bot"
-                if description and description.strip():
-                    commit_body += f"\n\n{description}"
-                full_commit_message = f"{commit_title}\n\n{commit_body}"
+                commit_title = f"feat(rules): add direct domain {domain} by Telegram Bot (Telegram user: {user_name})"
+                commit_body = description if description else ""
+                full_commit_message = commit_title
+                if commit_body and commit_body.strip():
+                    full_commit_message += f"\n\n{commit_body}"
                     
                 return (new_content, full_commit_message), None
 
@@ -329,7 +329,7 @@ class GitHubService:
             new_content = '\n'.join(new_lines)
             
             # 提交更改（遵循 Conventional Commits 规范）
-            commit_message = f"feat(rules): remove {domain}\n\nRemoved by @{user_name} via Telegram Bot"
+            commit_message = f"feat(rules): remove direct domain {domain} by Telegram Bot (Telegram user: {user_name})"
             
             def _perform_commit():
                 file_content = self.repo.get_contents(file_path)
