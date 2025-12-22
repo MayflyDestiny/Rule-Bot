@@ -1029,7 +1029,7 @@ class HandlerManager:
                 if add_result.get('commit_url'):
                     result_text += f"🔗 **查看提交：** [点击查看]({add_result['commit_url']})\n"
                     result_text += f"📝 **Commit ID：** `{add_result.get('commit_sha', '')[:8]}`\n"
-                result_text += f"💬 **提交信息：** {self.escape_markdown(add_result['commit_message'])}\n\n"
+                result_text += f"💬 **提交信息：** `{add_result['commit_message']}`\n\n"
                 result_text += "🎉 域名已成功添加到直连规则中！\n\n"
                 result_text += f"💡 **添加限制：** 本小时内还可添加 {remaining} 个域名"
             else:
@@ -1094,7 +1094,7 @@ class HandlerManager:
                 if add_result.get('commit_url'):
                     result_text += f"🔗 **查看提交：** [点击查看]({add_result['commit_url']})\n"
                     result_text += f"📝 **Commit ID：** `{add_result.get('commit_sha', '')[:8]}`\n"
-                result_text += f"💬 **提交信息：** {self.escape_markdown(add_result['commit_message'])}\n\n"
+                result_text += f"💬 **提交信息：** `{add_result['commit_message']}`\n\n"
                 result_text += "🎉 域名已成功添加到直连规则中！\n\n"
                 result_text += f"💡 **添加限制：** 本小时内还可添加 {remaining} 个域名"
             else:
