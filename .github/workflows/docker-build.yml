@@ -121,27 +121,3 @@ jobs:
               echo "Success: All architectures found in manifest"
             fi
           done
-      # =====  新增：把 README 同步到 Docker Hub Overview =====
-      - name: Update Docker Hub overview from README
-        if: github.event_name != 'pull_request'   # PR 不更新 Overview
-        env:
-          DOCKER_HUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_HUB_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          # 获取 JWT
-          TOKEN=$(curl -s -H "Content-Type: application/json" \
-                 -X POST -d "{\"username\":\"$DOCKER_HUB_USER\",\"password\":\"$DOCKER_HUB_PASS\"}" \
-                 https://hub.docker.com/v2/users/login/  | jq -r .token)
-
-          # 转义 README 内容（把换行和双引号替换成 JSON 安全字符）
-          DESC=$(sed 's/"/\\"/g' README.md | awk '{printf "%s\\n",$0}')
-
-          #  PATCH 到 Hub API
-          curl -s -o /dev/null -w "%{http_code}" \
-            -X PATCH \
-            -H "Content-Type: application/json" \
-            -H "Authorization: JWT $TOKEN" \
-            -d "{\"full_description\":\"$DESC\"}" \
-            https://hub.docker.com/v2/repositories/ ${{ env.IMAGE_NAME }}/
-
-          echo "Docker Hub overview updated!"
