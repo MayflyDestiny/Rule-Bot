@@ -237,6 +237,7 @@ class HandlerManager:
 ➕ *添加直连/代理规则功能：*
 • 自动检查域名 IP 归属地
 • 检查 NS 服务器归属地
+• 域名检查基于 DoH 和 GeoIP 数据
 • 根据检查结果自动判断是否适合添加
 • 支持添加说明信息
 
@@ -246,15 +247,12 @@ class HandlerManager:
 3. 查看检查结果
 4. 根据提示进行操作
 
-⚠️ *注意事项：*
-• 代理规则添加功能暂不支持
-• 删除规则功能暂不支持
-• 域名检查基于 DoH 和 GeoIP 数据
-
 🛠 *技术特性：*
 • 使用中国境内 EDNS 查询
 • 支持阿里云和腾讯云 DoH
 • 自动更新 GeoIP 和 GeoSite 数据
+
+⚠️ *注意：* 删除规则功能暂未开放。
 """
         
         keyboard = [[InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]]
@@ -398,8 +396,13 @@ class HandlerManager:
             elif state == "waiting_proxy_description":
                 await self._handle_proxy_description_input(update, text, user_id)
             else:
-                # 默认处理：显示主菜单
-                await self._show_main_menu_message(update.message)
+                # 尝试作为域名查询处理
+                normalized = normalize_domain(text)
+                if normalized:
+                    await self._handle_domain_query(update, text, user_id)
+                else:
+                    # 默认处理：显示主菜单
+                    await self._show_main_menu_message(update.message)
                 
         except Exception as e:
             logger.error(f"处理消息失败: {e}")
@@ -593,6 +596,7 @@ class HandlerManager:
 • 自动检查域名 IP 归属地
 • 检查 NS 服务器归属地
 • 根据检查结果自动判断是否适合添加
+• 域名检查基于 DoH 和 GeoIP 数据
 • 支持添加说明信息
 
 📝 *操作流程：*
@@ -601,10 +605,7 @@ class HandlerManager:
 3. 查看检查结果
 4. 根据提示进行操作
 
-⚠️ *注意事项：*
-• 代理规则添加功能暂不支持
-• 删除规则功能暂不支持
-• 域名检查基于 DoH 和 GeoIP 数据
+⚠️ *注意：* 删除规则功能暂未开放。
 """
         
         keyboard = [[InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]]
@@ -695,33 +696,45 @@ class HandlerManager:
                     for detail in check_result["details"][:5]:  # 限制显示数量
                         result_text += f"   • {detail}\n"
                 
+                # 智能建议逻辑
+                china_total = check_result.get("china_total_count", 0)
+                foreign_total = check_result.get("foreign_total_count", 0)
+                
+                recommendation = check_result.get('recommendation', '无建议')
+                explanation = ""
+
+                # 混合IP情况判断
+                if china_total > 0 and foreign_total > 0:
+                    if foreign_total > china_total:
+                        recommendation = "添加到代理规则"
+                        explanation = f"该域名海外服务器较多({foreign_total} > {china_total})，建议代理访问"
+                    else:
+                        recommendation = "添加到直连规则"
+                        explanation = f"该域名中国服务器较多({china_total} > {foreign_total})，建议直连访问"
+                else:
+                    # 保持原有逻辑，但补充说明
+                    if self.domain_checker.should_add_proxy(check_result):
+                         recommendation = "添加到代理规则"
+                         explanation = f"该域名海外服务器较多({foreign_total} > {china_total})，建议代理访问"
+                    elif self.domain_checker.should_add_directly(check_result):
+                         recommendation = "添加到直连规则"
+                         explanation = f"该域名中国服务器较多({china_total} > {foreign_total})，建议直连访问"
+                
                 # 根据条件显示建议和状态
                 if github_result.get("exists") or in_geosite:
                     result_text += f"\n✅ *状态：* 域名已在规则中，无需添加\n"
                 else:
-                    result_text += f"\n💡 *建议：* {check_result['recommendation']}\n"
+                    result_text += f"\n💡 *建议：* {recommendation}\n"
+                    if explanation:
+                        result_text += f"ℹ️ *说明：* {explanation}\n"
             
             # 显示操作按钮
-            keyboard = []
-            
-            # 查询页提供“添加直连规则”和“添加代理规则”按钮：
-            # - 海外 IP 总数 > 中国 IP 总数：仅提供“添加代理规则”
-            # - 否则：在有中国 IP 或中国 NS 时提供“添加直连规则”
-            if (not github_result.get("exists") and not in_geosite and "error" not in check_result):
-                china_total = int(check_result.get("china_total_count", 0) or 0)
-                foreign_total = int(check_result.get("foreign_total_count", 0) or 0)
-                
-                if foreign_total > china_total:
-                    keyboard.append([InlineKeyboardButton("➕ 添加代理规则", callback_data=f"add_proxy_domain_{domain}")])
-                    result_text += f"\nℹ️ *说明：* 检测到海外 IP 总数（{foreign_total}）大于中国 IP 总数（{china_total}），如需添加，请选择代理规则。\n"
-                else:
-                    if (check_result.get("domain_china_status") or check_result.get("second_level_china_status") or check_result.get("ns_china_status")):
-                        keyboard.append([InlineKeyboardButton("➕ 添加直连规则", callback_data=f"add_domain_{domain}")])
-                    else:
-                        result_text += "\nℹ️ *说明：* 未检测到中国 IP 或中国 NS，暂不提供直连规则添加入口。\n"
-            
-            keyboard.append([InlineKeyboardButton("🔍 重新查询", callback_data="query_domain")])
-            keyboard.append([InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")])
+            keyboard = [
+                [InlineKeyboardButton("➕ 添加直连规则", callback_data=f"add_domain_{domain}")],
+                [InlineKeyboardButton("➕ 添加代理规则", callback_data=f"add_proxy_domain_{domain}")],
+                [InlineKeyboardButton("🔍 重新查询", callback_data="query_domain")],
+                [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+            ]
             
             reply_markup = InlineKeyboardMarkup(keyboard)
             
