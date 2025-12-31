@@ -706,19 +706,19 @@ class HandlerManager:
                 # 混合IP情况判断
                 if china_total > 0 and foreign_total > 0:
                     if foreign_total > china_total:
-                        recommendation = "添加到代理规则"
-                        explanation = f"该域名海外服务器较多({foreign_total} > {china_total})，建议代理访问"
+                        recommendation = "🚀 添加到代理规则"
+                        explanation = f"该域名海外服务器较多(海外 IP {foreign_total} > 中国 IP {china_total})，建议代理访问"
                     else:
-                        recommendation = "添加到直连规则"
-                        explanation = f"该域名中国服务器较多({china_total} > {foreign_total})，建议直连访问"
+                        recommendation = "💫 添加到直连规则"
+                        explanation = f"该域名中国服务器较多(中国 IP {china_total} > 海外 IP {foreign_total})，建议直连访问"
                 else:
                     # 保持原有逻辑，但补充说明
                     if self.domain_checker.should_add_proxy(check_result):
-                         recommendation = "添加到代理规则"
-                         explanation = f"该域名海外服务器较多({foreign_total} > {china_total})，建议代理访问"
+                         recommendation = "🚀 添加到代理规则"
+                         explanation = f"该域名海外服务器较多(海外 IP {foreign_total} > 中国 IP {china_total})，建议代理访问"
                     elif self.domain_checker.should_add_directly(check_result):
-                         recommendation = "添加到直连规则"
-                         explanation = f"该域名中国服务器较多({china_total} > {foreign_total})，建议直连访问"
+                         recommendation = "💫 添加到直连规则"
+                         explanation = f"该域名中国服务器较多(中国 IP {china_total} > 海外 IP {foreign_total})，建议直连访问"
                 
                 # 根据条件显示建议和状态
                 if github_result.get("exists") or in_geosite:
