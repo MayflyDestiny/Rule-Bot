@@ -28,10 +28,12 @@ services:
       # 可选配置参数
       # - PROXY_RULE_FILE=your_proxy_rule_file_path
       # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
-
+      
       # - REQUIRED_GROUP_ID=your_group_id_here
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
+
+      # - REQUIRED_USER_ID=your_telegram_user_id_here
 
 EOF
 ```
@@ -60,7 +62,7 @@ EOF
   - 默认：不填写（使用系统默认邮箱）
 - `LOG_LEVEL`: 日志级别
   - 可选值：`DEBUG`、`INFO`、`WARNING`、`ERROR`
-  - 默认：`INFO`
+  - 默认：`WARNING`
 - `REQUIRED_GROUP_ID`: 群组验证 ID
   - 示例：`-1002413971610`
   - 默认：不填写（群组验证功能关闭）
@@ -70,6 +72,9 @@ EOF
 - `REQUIRED_GROUP_LINK`: 群组验证链接
   - 示例：`https://t.me/custom_openclash_rules_group`
   - 默认：不填写（群组验证功能关闭）
+- `REQUIRED_USER_ID`: 用户白名单（仅允许指定用户使用）
+  - 示例：`123456789`
+  - 默认：不填写（不启用白名单）
 
 3. **启动服务**
 ```bash
@@ -100,6 +105,7 @@ docker compose up -d
 - ✅ 智能建议：根据检查结果提供添加建议
 
 ### 🛡️ 访问控制
+- ✅ **用户白名单**：单独配置允许使用机器人的用户
 - ✅ **群组验证**：可要求用户加入指定 Telegram 群组才能使用
 - ✅ 可配置启用/禁用群组验证功能
 - ✅ 自动提示用户加入群组
@@ -125,6 +131,17 @@ docker compose up -d
 - REQUIRED_GROUP_NAME=Your Group Name
 - REQUIRED_GROUP_LINK=https://t.me/your_group_link
 ```
+
+### 🛡️ 用户白名单配置
+```yaml
+# 用户白名单 (可选: 仅允许指定用户使用机器人)
+# 留空则关闭此功能
+- REQUIRED_USER_ID=your_user_id_here
+```
+
+##### 获取用户 ID
+1. 在 Telegram 与 @userinfobot 对话，获取你的 `user_id`
+2. 或查看机器人日志输出中的用户 ID
 
 ### 📝 域名格式支持
 ```
@@ -343,10 +360,12 @@ docker pull aethersailor/rule-bot:v1.0.0
 | **可选参数** | | | | |
 | `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rule/Custom_Proxy.list` | 不填写 |
 | `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` | 系统默认 |
+| `LOG_LEVEL` | 可选 | 日志级别 | `INFO` / `WARNING` | `WARNING` |
 
 | `REQUIRED_GROUP_ID` | 可选 | 群组 ID | `-1002413971610` | 不填写 |
 | `REQUIRED_GROUP_NAME` | 可选 | 群组名称 | `Custom_OpenClash_Rules | 交流群` | 不填写 |
 | `REQUIRED_GROUP_LINK` | 可选 | 群组链接 | `https://t.me/custom_openclash_rules_group` | 不填写 |
+| `REQUIRED_USER_ID` | 可选 | 用户白名单（仅该用户可用） | `123456789` | 不填写 |
 
 
 #### 🔑 权限要求
@@ -430,6 +449,7 @@ environment:
 - `/help` - 查看帮助信息
 - `/query` - 快速查询域名
 - `/add` - 快速添加规则
+- `/delete` - 删除规则（暂不可用）
 
 ### 操作流程
 
@@ -461,9 +481,9 @@ environment:
    - 检查是否在 GEOSITE:CN 中
 
 2. **DNS 解析检查**
-   - 使用 DoH 查询域名 IP
+   - 使用 DoH（阿里云、腾讯云、Cloudflare）查询域名 IP
    - 附加 EDNS 参数模拟中国境内查询
-   - 查询 NS 服务器信息
+   - 查询 NS 服务器信息（Cloudflare / Google / Quad9）
 
 3. **IP 归属地检查**
    - 使用 GeoIP 数据库查询 IP 归属地
@@ -602,7 +622,15 @@ Copyright (c) 2024 AetherSailor
 <details>
 <summary>点击展开查看更新日志</summary>
 
-### v0.1.1 (当前版本)
+### v0.1.2 (当前版本)
+- 🧩 新增配置：支持 `REQUIRED_USER_ID` 用户白名单
+- ⚙️ 配置修正：`LOG_LEVEL` 默认值调整为 `WARNING`（与代码一致）
+- 📖 文档完善：补充 DoH 与 NS 服务器来源说明（阿里云/腾讯云/Cloudflare；Cloudflare/Google/Quad9）
+- 🧭 命令说明：在“基本命令”中新增 `/delete`（暂不可用）
+- 🕐 交互优化：添加直连规则时显示本小时剩余可添加数量
+- 🇨🇳 规则说明：显式提示 `.cn` 域名默认直连且不可添加
+
+### v0.1.1
 - 🚀 提升用户体验：将用户添加域名限制从每小时 5 个提升到 50 个
 - 🔧 优化 Docker 构建配置，提升构建性能
 - 📝 更新 README 文档，移除无用的 volumes 配置

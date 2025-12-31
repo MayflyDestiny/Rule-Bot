@@ -116,6 +116,25 @@ class HandlerManager:
         
         return True, description
     
+    async def _check_user_permission(self, update: Update) -> bool:
+        """检查用户是否有权限使用机器人"""
+        # 如果未配置白名单，则允许所有用户
+        if not self.config.REQUIRED_USER_ID:
+            return True
+            
+        user_id = update.effective_user.id
+        
+        # 检查是否匹配白名单ID
+        if str(user_id) != str(self.config.REQUIRED_USER_ID):
+            msg = "⛔ **无权访问**\n\n抱歉，您没有权限使用此机器人。\n仅限特定用户使用。"
+            if update.callback_query:
+                await update.callback_query.answer(text="无权访问", show_alert=True)
+            elif update.message:
+                await update.message.reply_text(msg, parse_mode='Markdown')
+            return False
+            
+        return True
+
     def escape_markdown(self, text: str) -> str:
         """转义Markdown特殊字符"""
         if not text:
@@ -149,6 +168,10 @@ class HandlerManager:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /start 命令"""
         try:
+            # 检查用户权限
+            if not await self._check_user_permission(update):
+                return
+
             # 检查群组成员身份
             if not await self.check_group_membership(update):
                 return
@@ -195,6 +218,10 @@ class HandlerManager:
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /help 命令"""
+        # 检查用户权限
+        if not await self._check_user_permission(update):
+            return
+
         help_text = f"""
 📖 *Rule-Bot 使用说明*
 
@@ -237,6 +264,10 @@ class HandlerManager:
     
     async def query_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /query 命令"""
+        # 检查用户权限
+        if not await self._check_user_permission(update):
+            return
+
         user_id = update.effective_user.id
         self.set_user_state(user_id, "waiting_query_domain")
         
@@ -265,6 +296,10 @@ class HandlerManager:
     
     async def add_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /add 命令"""
+        # 检查用户权限
+        if not await self._check_user_permission(update):
+            return
+
         keyboard = [
             [InlineKeyboardButton("➕ 添加直连规则", callback_data="add_direct_rule")],
             [InlineKeyboardButton("➕ 添加代理规则", callback_data="add_proxy_rule")],
@@ -279,6 +314,10 @@ class HandlerManager:
     
     async def delete_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理 /delete 命令"""
+        # 检查用户权限
+        if not await self._check_user_permission(update):
+            return
+
         await update.message.reply_text(
             "➖ **删除规则功能暂不可用**\n\n该功能正在开发中，敬请期待。"
         )
@@ -286,6 +325,10 @@ class HandlerManager:
     async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理回调查询"""
         try:
+            # 检查用户权限
+            if not await self._check_user_permission(update):
+                return
+
             # 检查群组成员身份
             if not await self.check_group_membership(update):
                 return
@@ -324,6 +367,10 @@ class HandlerManager:
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """处理文本消息"""
         try:
+            # 检查用户权限
+            if not await self._check_user_permission(update):
+                return
+
             # 检查群组成员身份
             if not await self.check_group_membership(update):
                 return

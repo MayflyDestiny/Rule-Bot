@@ -32,6 +32,9 @@ class Config:
         self.REQUIRED_GROUP_NAME = os.getenv("REQUIRED_GROUP_NAME", "")
         self.REQUIRED_GROUP_LINK = os.getenv("REQUIRED_GROUP_LINK", "")
         
+        # 用户白名单配置
+        self.REQUIRED_USER_ID = os.getenv("REQUIRED_USER_ID", "")
+        
         # 数据源URL
         # 使用 Loyalsoldier GeoIP 数据库（针对中国 IP 优化）
         self.GEOIP_URL = "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/Country-without-asn.mmdb"
