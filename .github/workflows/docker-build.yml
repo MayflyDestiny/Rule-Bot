@@ -23,7 +23,7 @@ concurrency:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: aethersailor/rule-bot
+  IMAGE_NAME: mayflydestiny/rule-bot
 
 jobs:
   # 构建并推送多架构镜像
