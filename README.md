@@ -16,7 +16,7 @@ cat > docker-compose.yml << 'EOF'
 version: '3.8'
 services:
   rule-bot:
-    image: aethersailor/rule-bot:latest
+    image: mayflydestiny/rule-bot:latest
     container_name: rule-bot
     restart: unless-stopped
     environment:
@@ -199,7 +199,7 @@ version: '3.8'
 
 services:
   rule-bot:
-    image: aethersailor/rule-bot:latest
+    image: mayflydestiny/rule-bot:latest
     container_name: rule-bot
     restart: unless-stopped
     environment:
@@ -231,6 +231,10 @@ services:
       # - REQUIRED_GROUP_ID=your_group_id_here
       # - REQUIRED_GROUP_NAME=Your Group Name
       # - REQUIRED_GROUP_LINK=https://t.me/your_group_link
+
+      # 用户验证 (可选: 仅允许指定用户使用机器人)
+      # 留空则关闭此功能
+      # - REQUIRED_USER_ID=your_telegram_user_id_here
       
 ```
 
@@ -248,7 +252,7 @@ docker-compose logs -f rule-bot
 
 #### 1. 拉取镜像
 ```bash
-docker pull aethersailor/rule-bot:latest
+docker pull mayflydestiny/rule-bot:latest
 ```
 
 #### 2. 运行容器
@@ -262,7 +266,7 @@ docker run -d \
   -e GITHUB_TOKEN="你的 GitHub Token" \
   -e GITHUB_REPO="your_username/your_repository_name" \
   -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
-  aethersailor/rule-bot:latest
+  mayflydestiny/rule-bot:latest
 ```
 
 **完整参数版本（包含所有可选配置）：**
@@ -282,7 +286,8 @@ docker run -d \
   #-e REQUIRED_GROUP_ID="your_group_id_here" \
   #-e REQUIRED_GROUP_NAME="Your Group Name" \
   #-e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
-  aethersailor/rule-bot:latest
+  #-e REQUIRED_USER_ID="your_telegram_user_id_here" \
+  mayflydestiny/rule-bot:latest
 ```
 
 #### 4. 查看日志
@@ -296,7 +301,7 @@ docker logs -f rule-bot
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/Aethersailor/Rule-Bot.git
+git clone https://github.com/mayflydestiny/rule-bot.git
 cd Rule-Bot
 ```
 
@@ -306,26 +311,6 @@ cd Rule-Bot
 3. **构建并启动**
 ```bash
 docker-compose up -d --build
-```
-
-### 🏷️ 镜像标签说明
-
-| 标签 | 说明 | 适用场景 |
-|------|------|----------|
-| `latest` | 最新稳定版本 | 生产环境推荐 |
-| `dev` | 开发版本 | 测试新功能 |
-| `v1.0.0` | 特定版本 | 版本锁定 |
-
-#### 拉取特定版本
-```bash
-# 拉取最新版本
-docker pull aethersailor/rule-bot:latest
-
-# 拉取开发版本
-docker pull aethersailor/rule-bot:dev
-
-# 拉取特定版本
-docker pull aethersailor/rule-bot:v1.0.0
 ```
 
 #### 支持的架构
@@ -404,6 +389,17 @@ docker pull aethersailor/rule-bot:v1.0.0
 3. 查看机器人日志获取群组 ID
 4. 或者使用 [@userinfobot](https://t.me/userinfobot) 获取
 
+##### 🛡️ 用户白名单配置
+```yaml
+# 用户白名单 (可选: 仅允许指定用户使用机器人)
+# 留空则关闭此功能
+- REQUIRED_USER_ID=123456789
+```
+
+##### 获取用户 ID
+1. 在 Telegram 与 @userinfobot 对话，获取你的 `user_id`
+2. 或查看机器人日志输出中的用户 ID
+
 #### 📝 配置示例
 
 **最小配置示例（仅必需参数）：**
@@ -421,6 +417,7 @@ environment:
   # - REQUIRED_GROUP_ID=-1002413971610  # 群组验证默认关闭
   # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
   # - REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
+  # - REQUIRED_USER_ID=123456789  # 用户白名单（可选）
 ```
 
 **完整配置示例（包含所有可选参数）：**
@@ -440,6 +437,9 @@ environment:
   # - REQUIRED_GROUP_ID=-1002413971610
   # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
   # - REQUIRED_GROUP_LINK=https://t.me/custom_openclash_rules_group
+  
+  # 用户白名单（可选）
+  # - REQUIRED_USER_ID=123456789
 ```
 
 ## 使用方法
