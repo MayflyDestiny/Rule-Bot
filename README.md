@@ -16,7 +16,7 @@ cat > docker-compose.yml << 'EOF'
 version: '3.8'
 services:
   rule-bot:
-    image: aethersailor/rule-bot:latest
+    image: mayflydestiny/rule-bot:latest
     container_name: rule-bot
     restart: unless-stopped
     environment:
@@ -25,8 +25,8 @@ services:
       - GITHUB_TOKEN=你的 GitHub Token
       - GITHUB_REPO=your_username/your_repository_name
       - DIRECT_RULE_FILE=your_direct_rule_file_path
+      - PROXY_RULE_FILE=your_proxy_rule_file_path
       # 可选配置参数
-      # - PROXY_RULE_FILE=your_proxy_rule_file_path
       # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
       
       # - REQUIRED_GROUP_ID=your_group_id_here
@@ -50,13 +50,10 @@ EOF
   - 示例：`Aethersailor/Custom_OpenClash_Rules`
 - `DIRECT_RULE_FILE`: 直连规则文件路径
   - 示例：`rule/Custom_Direct.list`
+  `PROXY_RULE_FILE`: 代理规则文件路径
+  - 示例：`rule/Custom_Proxy.list`
 
 **可选参数：**
-> 💡 **提示：未配置 `PROXY_RULE_FILE` 时，“添加代理规则”功能将不可用。**
-
-- `PROXY_RULE_FILE`: 代理规则文件路径（启用代理规则添加功能）
-  - 示例：`rule/Custom_Proxy.list`
-  - 默认：不填写（不启用代理规则添加）
 - `GITHUB_COMMIT_EMAIL`: 自定义提交邮箱地址
   - 示例：`your-email@example.com`
   - 默认：不填写（使用系统默认邮箱）
@@ -208,7 +205,7 @@ version: '3.8'
 
 services:
   rule-bot:
-    image: aethersailor/rule-bot:latest
+    image: mayflydestiny/rule-bot:latest
     container_name: rule-bot
     restart: unless-stopped
     environment:
@@ -224,15 +221,15 @@ services:
       
       # 直连规则文件路径 (相对于仓库根目录)
       - DIRECT_RULE_FILE=your_direct_rule_file_path
+
+      # 代理规则文件路径（启用“添加代理规则”功能）
+      - PROXY_RULE_FILE=your_proxy_rule_file_path
       
       # ========== 可选配置参数 ==========
-      # 代理规则文件路径（启用“添加代理规则”功能）
-      # - PROXY_RULE_FILE=your_proxy_rule_file_path
       
       # GitHub Commit Email (可选: 自定义Rule-Bot的邮箱地址)
       # 提交者名称固定为 Rule-Bot，邮箱可自定义
-      # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com
-      
+      # - GITHUB_COMMIT_EMAIL=your-custom-email@example.com 
 
       
       # 群组验证 (可选: 要求用户加入指定群组才能使用机器人)
@@ -257,7 +254,7 @@ docker-compose logs -f rule-bot
 
 #### 1. 拉取镜像
 ```bash
-docker pull aethersailor/rule-bot:latest
+docker pull mayflydestiny/rule-bot:latest
 ```
 
 #### 2. 运行容器
@@ -271,7 +268,8 @@ docker run -d \
   -e GITHUB_TOKEN="你的 GitHub Token" \
   -e GITHUB_REPO="your_username/your_repository_name" \
   -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
-  aethersailor/rule-bot:latest
+  -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
+  mayflydestiny/rule-bot:latest
 ```
 
 **完整参数版本（包含所有可选配置）：**
@@ -284,14 +282,14 @@ docker run -d \
   -e GITHUB_TOKEN="你的 GitHub Token" \
   -e GITHUB_REPO="your_username/your_repository_name" \
   -e DIRECT_RULE_FILE="your_direct_rule_file_path" \
+  -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
   # 可选参数
-  # -e PROXY_RULE_FILE="your_proxy_rule_file_path" \
   # -e GITHUB_COMMIT_EMAIL="your-custom-email@example.com" \
   -e LOG_LEVEL="INFO" \
   #-e REQUIRED_GROUP_ID="your_group_id_here" \
   #-e REQUIRED_GROUP_NAME="Your Group Name" \
   #-e REQUIRED_GROUP_LINK="https://t.me/your_group_link" \
-  aethersailor/rule-bot:latest
+  mayflydestiny/rule-bot:latest
 ```
 
 #### 4. 查看日志
@@ -305,7 +303,7 @@ docker logs -f rule-bot
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/Aethersailor/Rule-Bot.git
+git clone https://github.com/mayflydestiny/rule-bot.git
 cd Rule-Bot
 ```
 
@@ -328,13 +326,13 @@ docker-compose up -d --build
 #### 拉取特定版本
 ```bash
 # 拉取最新版本
-docker pull aethersailor/rule-bot:latest
+docker pull mayflydestiny/rule-bot:latest
 
 # 拉取开发版本
-docker pull aethersailor/rule-bot:dev
+docker pull mayflydestiny/rule-bot:dev
 
 # 拉取特定版本
-docker pull aethersailor/rule-bot:v1.0.0
+docker pull mayflydestiny/rule-bot:v1.0.0
 ```
 
 #### 支持的架构
@@ -366,8 +364,8 @@ docker pull aethersailor/rule-bot:v1.0.0
 | `GITHUB_TOKEN` | 必需 | GitHub 个人访问令牌 | `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | 无 |
 | `GITHUB_REPO` | 必需 | 目标 GitHub 仓库 | `Aethersailor/Custom_OpenClash_Rules` | 无 |
 | `DIRECT_RULE_FILE` | 必需 | 直连规则文件路径 | `rule/Custom_Direct.list` | 无 |
+| `PROXY_RULE_FILE` | 必需 | 代理规则文件路径 | `rule/Custom_Proxy.list` | 无 |
 | **可选参数** | | | | |
-| `PROXY_RULE_FILE` | 可选 | 代理规则文件路径（暂不使用） | `rule/Custom_Proxy.list` | 不填写 |
 | `GITHUB_COMMIT_EMAIL` | 可选 | 自定义提交邮箱地址 | `your-email@example.com` | 系统默认 |
 | `LOG_LEVEL` | 可选 | 日志级别 | `INFO` / `WARNING` | `WARNING` |
 
@@ -423,9 +421,9 @@ environment:
   - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
+  - PROXY_RULE_FILE=rule/Custom_Proxy.list
   
-      # 可选参数（可以不填写，使用默认值）
-    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 未配置则不启用代理添加
+  # 可选参数（可以不填写，使用默认值）
   # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 使用系统默认
   # - REQUIRED_GROUP_ID=-1002413971610  # 群组验证默认关闭
   # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
@@ -440,9 +438,10 @@ environment:
   - GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   - GITHUB_REPO=Aethersailor/Custom_OpenClash_Rules
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
+  - PROXY_RULE_FILE=rule/Custom_Proxy.list
   
-      # 可选参数（根据需要选择填写）
-    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 代理规则（启用后可添加）
+  # 可选参数（根据需要选择填写）
+  
   # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 自定义邮箱
   
   # 群组验证（需要同时配置三个参数才生效）
@@ -641,7 +640,13 @@ Copyright (c) 2024 AetherSailor
 <details>
 <summary>点击展开查看更新日志</summary>
 
-### v0.1.2 (当前版本)
+### v0.1.3 (当前版本)
+- ✨ 新增功能：支持添加代理规则，当检测到海外 IP > 中国 IP 时可添加
+- 🔘 交互优化：查询结果根据 IP 归属地智能显示“添加直连规则”或“添加代理规则”按钮
+- ⚙️ 配置更新：启用 `PROXY_RULE_FILE` 配置项，支持自定义代理规则文件路径
+- 📝 文档更新：完善添加规则逻辑说明和 Commit 格式说明
+
+### v0.1.2
 - 🧩 新增配置：支持 `REQUIRED_USER_ID` 用户白名单
 - ⚙️ 配置修正：`LOG_LEVEL` 默认值调整为 `WARNING`（与代码一致）
 - 📖 文档完善：补充 DoH 与 NS 服务器来源说明（阿里云/腾讯云/Cloudflare；Cloudflare/Google/Quad9）
