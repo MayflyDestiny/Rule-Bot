@@ -1,6 +1,6 @@
 # Rule-Bot
 
-一个专门管理 Clash 规则的 Telegram 机器人，支持域名查询、添加直连规则等功能。通过智能检测和自动管理，帮助用户轻松维护 Clash 的直连规则列表。
+一个专门管理 Clash 规则的 Telegram 机器人，支持域名查询、添加直连规则与代理规则。通过智能检测和自动管理，帮助用户轻松维护 Clash 的直连/代理规则列表。
 
 ## ⚡ 快速开始
 
@@ -52,11 +52,11 @@ EOF
   - 示例：`rule/Custom_Direct.list`
 
 **可选参数：**
-> 💡 **提示：所有可选参数都可以不填写，不影响机器人正常使用。必要参数已设置预设默认值。**
+> 💡 **提示：未配置 `PROXY_RULE_FILE` 时，“添加代理规则”功能将不可用。**
 
-- `PROXY_RULE_FILE`: 代理规则文件路径（暂不使用）
+- `PROXY_RULE_FILE`: 代理规则文件路径（启用代理规则添加功能）
   - 示例：`rule/Custom_Proxy.list`
-  - 默认：不填写（功能暂未启用）
+  - 默认：不填写（不启用代理规则添加）
 - `GITHUB_COMMIT_EMAIL`: 自定义提交邮箱地址
   - 示例：`your-email@example.com`
   - 默认：不填写（使用系统默认邮箱）
@@ -91,18 +91,19 @@ docker compose up -d
 
 ### 📋 域名管理
 - ✅ 域名查询：检查域名是否已在规则中
-- ✅ 域名添加：支持多种 URL 格式，自动提取二级域名
+- ✅ 添加直连规则：支持多种 URL 格式，自动提取二级域名
+- ✅ 添加代理规则：支持根据检测结果自动添加到代理文件
 - ✅ 智能提取：支持完整 URL、带端口、带路径等格式
 - ✅ 重复检测：防止重复添加相同域名
 - ✅ **Commit 链接**：成功添加后提供 GitHub commit 链接
 - ❌ **.cn 域名限制**：**.cn 域名默认直连，不可手动添加**
 
 ### 🔍 智能检测
-- ✅ GitHub 规则检查：检查域名是否已在直连规则中
+- ✅ GitHub 规则检查：检查域名是否已在直连或代理规则中
 - ✅ GEOSITE:CN 检查：检查域名是否已在中国直连列表中
 - ✅ DNS 解析检查：检查域名 IP 是否在中国大陆
 - ✅ NS 服务器检查：检查域名 NS 服务器位置
-- ✅ 智能建议：根据检查结果提供添加建议
+- ✅ 智能建议：根据检查结果提供直连或代理添加建议
 
 ### 🛡️ 访问控制
 - ✅ **用户白名单**：单独配置允许使用机器人的用户
@@ -163,23 +164,31 @@ docker compose up -d
 
 1. **格式检查**：验证输入格式，提取二级域名
 2. **域名限制**：拒绝 .cn 域名添加
-3. **重复检查**：检查 GitHub 规则和 GEOSITE:CN 中是否已存在
-4. **智能判断**：
-   - 域名 IP 在中国大陆 → 直接添加
-   - 域名 IP 不在中国，但 NS 在中国 → 直接添加  
-   - 域名 IP 和 NS 都不在中国 → 拒绝添加
+3. **重复检查**：检查 GitHub 规则（直连/代理）与 GEOSITE:CN
+4. **查询页按钮显示策略**：
+   - 当“海外 IP 总数 > 中国 IP 总数” → 显示“➕ 添加代理规则”
+   - 否则在存在中国 IP 或中国 NS 时 → 显示“➕ 添加直连规则”
+   - 若不满足上述条件 → 不显示对应添加按钮并给出提示
+5. **命令入口判定**：
+   - 选择“➕ 添加直连规则”按钮或命令时：沿用原直连逻辑（域名/二级域名有中国 IP，或 NS 在中国大陆）
+   - 选择“➕ 添加代理规则”按钮或命令时：当“海外 IP 总数 > 中国 IP 总数”时允许添加
 
 ## 🎯 Commit 格式
 
 所有操作都会在 GitHub 上创建规范的 commit 记录：
 
 ```
-标题: Add direct domain example.com by Telegram Bot (@username)
+feat(rules): add direct domain example.com by Telegram Bot (Telegram user: @username)
 描述: 用户提供的域名描述（可选）
 ```
 
 ```
-标题: Remove direct domain example.com by Telegram Bot (@username)
+feat(rules): add proxy domain example.com by Telegram Bot (Telegram user: @username)
+描述: 用户提供的域名描述（可选）
+```
+
+```
+feat(rules): remove direct domain example.com by Telegram Bot (Telegram user: @username)
 描述: (空)
 ```
 
@@ -217,7 +226,7 @@ services:
       - DIRECT_RULE_FILE=your_direct_rule_file_path
       
       # ========== 可选配置参数 ==========
-      # 代理规则文件路径 (可选，暂不使用)
+      # 代理规则文件路径（启用“添加代理规则”功能）
       # - PROXY_RULE_FILE=your_proxy_rule_file_path
       
       # GitHub Commit Email (可选: 自定义Rule-Bot的邮箱地址)
@@ -416,7 +425,7 @@ environment:
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
   
       # 可选参数（可以不填写，使用默认值）
-    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 暂不使用
+    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 未配置则不启用代理添加
   # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 使用系统默认
   # - REQUIRED_GROUP_ID=-1002413971610  # 群组验证默认关闭
   # - REQUIRED_GROUP_NAME=Custom_OpenClash_Rules | 交流群
@@ -433,7 +442,7 @@ environment:
   - DIRECT_RULE_FILE=rule/Custom_Direct.list
   
       # 可选参数（根据需要选择填写）
-    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 代理规则（暂不使用）
+    # - PROXY_RULE_FILE=rule/Custom_Proxy.list  # 代理规则（启用后可添加）
   # - GITHUB_COMMIT_EMAIL=your-email@example.com  # 自定义邮箱
   
   # 群组验证（需要同时配置三个参数才生效）
@@ -456,12 +465,20 @@ environment:
 #### 查询域名
 1. 点击 "🔍 查询域名" 或发送 `/query`
 2. 输入要查询的域名
-3. 查看详细的查询结果
+3. 查看详细的查询结果（根据检测结果显示“添加直连规则”或“添加代理规则”按钮）
 
 #### 添加直连规则
 1. 点击 "➕ 添加直连规则"
 2. 输入要添加的域名
-3. 系统自动检查域名状态
+3. 系统自动检查域名状态（存在中国 IP 或中国 NS 时可添加）
+4. 根据提示确认添加
+5. 可选择添加说明信息
+6. 自动提交到 GitHub
+
+#### 添加代理规则
+1. 点击 "➕ 添加代理规则"
+2. 输入要添加的域名
+3. 系统自动检查域名状态（当“海外 IP 总数 > 中国 IP 总数”时可添加）
 4. 根据提示确认添加
 5. 可选择添加说明信息
 6. 自动提交到 GitHub
@@ -490,10 +507,12 @@ environment:
    - 检查域名和 NS 服务器是否在中国大陆
 
 4. **添加决策**
-   - 域名 IP 在中国 + NS 在中国：直接添加
-   - 域名 IP 在中国 + NS 不在中国：直接添加
-   - 域名 IP 不在中国 + NS 在中国：询问用户确认
-   - 域名 IP 不在中国 + NS 不在中国：拒绝添加
+   - 查询页：
+     - 海外 IP 总数 > 中国 IP 总数 → 提供“添加代理规则”
+     - 否则在存在中国 IP 或中国 NS 时 → 提供“添加直连规则”
+   - 命令页：
+     - “添加直连规则”入口沿用直连判定（中国 IP / 中国 NS）
+     - “添加代理规则”入口采用海外>中国判定
 
 ### 数据更新
 - GeoIP 数据：每 6 小时自动更新

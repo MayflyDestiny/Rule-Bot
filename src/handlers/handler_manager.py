@@ -346,17 +346,23 @@ class HandlerManager:
             elif data == "add_direct_rule":
                 await self._start_add_direct_rule(query, user_id)
             elif data == "add_proxy_rule":
-                await self._show_proxy_rule_not_supported(query)
+                await self._start_add_proxy_rule(query, user_id)
             elif data == "delete_rule":
                 await self._show_delete_not_supported(query)
             elif data == "help":
                 await self._show_help(query)
             elif data.startswith("add_domain_"):
                 await self._handle_add_domain_callback(query, user_id, data)
+            elif data.startswith("add_proxy_domain_"):
+                await self._handle_add_proxy_domain_callback(query, user_id, data)
             elif data.startswith("confirm_add_"):
                 await self._handle_confirm_add_callback(query, user_id, data)
+            elif data.startswith("confirm_add_proxy_"):
+                await self._handle_confirm_add_proxy_callback(query, user_id, data)
             elif data == "skip_description":
                 await self._handle_skip_description(query, user_id)
+            elif data == "skip_description_proxy":
+                await self._handle_skip_description_proxy(query, user_id)
             else:
                 await query.edit_message_text("未知操作")
                 
@@ -387,6 +393,10 @@ class HandlerManager:
                 await self._handle_add_domain_input(update, text, user_id)
             elif state == "waiting_description":
                 await self._handle_description_input(update, text, user_id)
+            elif state == "waiting_add_proxy_domain":
+                await self._handle_add_proxy_domain_input(update, text, user_id)
+            elif state == "waiting_proxy_description":
+                await self._handle_proxy_description_input(update, text, user_id)
             else:
                 # 默认处理：显示主菜单
                 await self._show_main_menu_message(update.message)
@@ -531,13 +541,25 @@ class HandlerManager:
             parse_mode='Markdown'
         )
     
-    async def _show_proxy_rule_not_supported(self, query):
-        """显示代理规则不支持"""
+    async def _start_add_proxy_rule(self, query, user_id: int):
+        self.set_user_state(user_id, "waiting_add_proxy_domain")
+        can_add, remaining = self.check_user_add_limit(user_id)
+        try:
+            github_stats = await self.github_service.get_file_stats(file_path=self.config.PROXY_RULE_FILE)
+            proxy_rule_count = github_stats.get("rule_count", 0) if "error" not in github_stats else 0
+            geosite_count = len(self.data_manager.geosite_domains)
+            stats_text = f"📊 *当前统计：*\n• 代理规则数量：{proxy_rule_count}\n• GEOSITE:CN 域名数量：{geosite_count:,}\n\n"
+            if can_add:
+                stats_text += f"💡 *添加限制：* 本小时内还可添加 {remaining} 个域名\n\n"
+            else:
+                stats_text += f"⚠️ *添加限制：* 本小时内已达到添加上限，请稍后再试\n\n"
+        except Exception as e:
+            logger.error(f"获取统计信息失败: {e}")
+            stats_text = "📊 *统计信息加载中...*\n\n"
         keyboard = [[InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await query.edit_message_text(
-            f"➕ *添加代理规则*\n\n📂 *目标仓库：* `{self.config.GITHUB_REPO}`\n📄 *规则文件：* `{self.config.PROXY_RULE_FILE}`\n\n⚠️ *代理规则功能暂不支持*\n\n该功能正在开发中，敬请期待。",
+            f"➕ *添加代理规则*\n\n📂 *目标仓库：* `{self.config.GITHUB_REPO}`\n📄 *规则文件：* `{self.config.PROXY_RULE_FILE}`\n\n{stats_text}请输入要添加的域名：\n\n📝 支持格式：\n• example.com\n• www.example.com\n• https://example.com\n• https://www.example.com/path\n• sub.example.com\n• ftp://example.com\n• example.com:8080\n\n💡 *注意：系统将自动提取二级域名进行添加*",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
@@ -676,21 +698,27 @@ class HandlerManager:
                 # 根据条件显示建议和状态
                 if github_result.get("exists") or in_geosite:
                     result_text += f"\n✅ *状态：* 域名已在规则中，无需添加\n"
-                elif (not github_result.get("exists") and not in_geosite and 
-                    (check_result.get("domain_china_status") or check_result.get("second_level_china_status") or check_result.get("ns_china_status"))):
-                    result_text += f"\n💡 *建议：* {check_result['recommendation']}\n"
                 else:
-                    result_text += f"\n ℹ️ *说明：* 域名IP和NS均不在中国大陆，不建议添加\n"
+                    result_text += f"\n💡 *建议：* {check_result['recommendation']}\n"
             
             # 显示操作按钮
             keyboard = []
             
-            # 只有当域名不在GitHub规则和GeoSite中，且有中国IP或NS时才推荐添加
-            # (.cn域名已经在上面提前处理了，这里不会遇到)
-            if (not github_result.get("exists") and not in_geosite and 
-                "error" not in check_result and 
-                (check_result.get("domain_china_status") or check_result.get("second_level_china_status") or check_result.get("ns_china_status"))):
-                keyboard.append([InlineKeyboardButton("➕ 添加到直连规则", callback_data=f"add_domain_{domain}")])
+            # 查询页提供“添加直连规则”和“添加代理规则”按钮：
+            # - 海外 IP 总数 > 中国 IP 总数：仅提供“添加代理规则”
+            # - 否则：在有中国 IP 或中国 NS 时提供“添加直连规则”
+            if (not github_result.get("exists") and not in_geosite and "error" not in check_result):
+                china_total = int(check_result.get("china_total_count", 0) or 0)
+                foreign_total = int(check_result.get("foreign_total_count", 0) or 0)
+                
+                if foreign_total > china_total:
+                    keyboard.append([InlineKeyboardButton("➕ 添加代理规则", callback_data=f"add_proxy_domain_{domain}")])
+                    result_text += f"\nℹ️ *说明：* 检测到海外 IP 总数（{foreign_total}）大于中国 IP 总数（{china_total}），如需添加，请选择代理规则。\n"
+                else:
+                    if (check_result.get("domain_china_status") or check_result.get("second_level_china_status") or check_result.get("ns_china_status")):
+                        keyboard.append([InlineKeyboardButton("➕ 添加直连规则", callback_data=f"add_domain_{domain}")])
+                    else:
+                        result_text += "\nℹ️ *说明：* 未检测到中国 IP 或中国 NS，暂不提供直连规则添加入口。\n"
             
             keyboard.append([InlineKeyboardButton("🔍 重新查询", callback_data="query_domain")])
             keyboard.append([InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")])
@@ -895,6 +923,145 @@ class HandlerManager:
             logger.error(f"添加域名输入处理失败: {e}")
             await update.message.reply_text("处理失败，请重试。")
     
+    async def _handle_add_proxy_domain_input(self, update: Update, domain_input: str, user_id: int):
+        try:
+            processing_msg = await update.message.reply_text("🔍 正在检查域名，请稍候...")
+            can_add, remaining = self.check_user_add_limit(user_id)
+            if not can_add:
+                keyboard = [
+                    [InlineKeyboardButton("🔍 查询域名", callback_data="query_domain")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await processing_msg.edit_text(
+                    "⚠️ **添加频率限制**\n\n"
+                    f"您在当前小时内已达到添加上限（{self.MAX_ADDS_PER_HOUR}个域名）。\n\n"
+                    "🕐 请等待一小时后再尝试添加新域名。\n\n"
+                    "💡 此限制是为了防止系统滥用，感谢您的理解。",
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                self.set_user_state(user_id, "idle")
+                return
+            normalized_input = normalize_domain(domain_input)
+            if normalized_input and is_cn_domain(normalized_input):
+                keyboard = [
+                    [InlineKeyboardButton("🔍 查询其他域名", callback_data="query_domain")],
+                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await processing_msg.edit_text(
+                    "❌ **.cn域名不可添加代理规则**\n\n"
+                    "📋 **.cn域名默认直连**：所有.cn结尾的域名都已默认走直连路线，不应添加到代理规则中。\n\n"
+                    "💡 如需添加其他域名，请选择下方操作：",
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                self.set_user_state(user_id, "idle")
+                return
+            domain = extract_second_level_domain_for_rules(domain_input)
+            if not domain:
+                await processing_msg.edit_text("❌ 无效的域名格式，请重新输入。")
+                self.set_user_state(user_id, "idle")
+                return
+            if domain != normalize_domain(domain_input):
+                await processing_msg.edit_text(f"🔍 已提取二级域名：`{domain}`\n\n正在检查域名状态...")
+                await asyncio.sleep(1)
+            await processing_msg.edit_text("🔍 正在检查域名是否已存在...")
+            proxy_github_result = await self.github_service.check_domain_in_rules(domain, file_path=self.config.PROXY_RULE_FILE)
+            direct_github_result = await self.github_service.check_domain_in_rules(domain)
+            second_level = extract_second_level_domain(domain)
+            if proxy_github_result.get("exists"):
+                result_text = f"❌ **域名已存在于代理规则中**\n\n"
+                result_text += f"📍 **域名：** `{domain}`\n\n"
+                result_text += "📋 **找到的规则：**\n"
+                for match in proxy_github_result.get("matches", []):
+                    result_text += f"   • 第{match['line']}行: {match['rule']}\n"
+                keyboard = [
+                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+                self.set_user_state(user_id, "idle")
+                return
+            if direct_github_result.get("exists"):
+                result_text = f"❌ **域名已存在于直连规则中**\n\n"
+                result_text += f"📍 **域名：** `{domain}`\n\n"
+                result_text += "📋 **找到的规则：**\n"
+                for match in direct_github_result.get("matches", []):
+                    result_text += f"   • 第{match['line']}行: {match['rule']}\n"
+                keyboard = [
+                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+                self.set_user_state(user_id, "idle")
+                return
+            if second_level and second_level != domain:
+                proxy_second_level_result = await self.github_service.check_domain_in_rules(second_level, file_path=self.config.PROXY_RULE_FILE)
+                if proxy_second_level_result.get("exists"):
+                    result_text = f"❌ **二级域名已存在于代理规则中**\n\n"
+                    result_text += f"📍 **输入域名：** `{domain}`\n"
+                    result_text += f"📍 **二级域名：** `{second_level}`\n\n"
+                    result_text += "📋 **找到的规则：**\n"
+                    for match in proxy_second_level_result.get("matches", []):
+                        result_text += f"   • 第{match['line']}行: {match['rule']}\n"
+                    keyboard = [
+                        [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                        [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+                    self.set_user_state(user_id, "idle")
+                    return
+            in_geosite = await self.data_manager.is_domain_in_geosite(domain)
+            if in_geosite:
+                result_text = f"❌ **域名已存在于GEOSITE:CN中**\n\n"
+                result_text += f"📍 **域名：** `{domain}`\n\n"
+                result_text += "该域名已在GEOSITE:CN规则中，属于中国域名，不应添加到代理规则。"
+                keyboard = [
+                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+                self.set_user_state(user_id, "idle")
+                return
+            await processing_msg.edit_text("🔍 正在检查域名IP和NS信息...")
+            check_result = await self.domain_checker.check_domain_comprehensive(domain)
+            if "error" in check_result:
+                await processing_msg.edit_text(f"❌ 域名检查失败：{check_result['error']}")
+                return
+            self.set_user_state(user_id, "proxy_domain_checked", {
+                "domain": domain,
+                "check_result": check_result
+            })
+            result_text = f"📊 **域名检查结果**\n\n"
+            result_text += f"📍 **域名：** `{domain}`\n\n"
+            if check_result["details"]:
+                result_text += "🌍 **检查详情：**\n"
+                for detail in check_result["details"]:
+                    result_text += f"   • {detail}\n"
+            china_total = check_result.get("china_total_count", 0)
+            foreign_total = check_result.get("foreign_total_count", 0)
+            result_text += f"\n💡 **建议：** {'添加到代理规则' if self.domain_checker.should_add_proxy(check_result) else '不建议添加到代理规则'}\n"
+            keyboard = []
+            if self.domain_checker.should_add_proxy(check_result):
+                keyboard.append([InlineKeyboardButton("✅ 确认添加", callback_data="confirm_add_proxy_yes")])
+                keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_proxy_no")])
+            else:
+                result_text += "\n❌ **不符合添加条件，无法添加到代理规则。**"
+                keyboard.append([InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")])
+            keyboard.append([InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"添加代理域名输入处理失败: {e}")
+            await update.message.reply_text("处理失败，请重试。")
+    
     async def _handle_add_domain_callback(self, query, user_id: int, data: str):
         """处理添加域名回调"""
         try:
@@ -940,6 +1107,44 @@ class HandlerManager:
             
         except Exception as e:
             logger.error(f"处理添加域名回调失败: {e}")
+            await query.edit_message_text("操作失败，请重试。")
+    
+    async def _handle_add_proxy_domain_callback(self, query, user_id: int, data: str):
+        try:
+            domain = data.replace("add_proxy_domain_", "")
+            check_result = await self.domain_checker.check_domain_comprehensive(domain)
+            if "error" in check_result:
+                await query.edit_message_text(f"❌ 域名检查失败：{check_result['error']}")
+                return
+            self.set_user_state(user_id, "proxy_domain_checked", {
+                "domain": domain,
+                "check_result": check_result
+            })
+            result_text = f"📊 **域名检查结果**\n\n"
+            result_text += f"📍 **域名：** `{domain}`\n\n"
+            if check_result["details"]:
+                result_text += "🌍 **检查详情：**\n"
+                for detail in check_result["details"]:
+                    result_text += f"   • {detail}\n"
+            china_total = check_result.get("china_total_count", 0)
+            foreign_total = check_result.get("foreign_total_count", 0)
+            if self.domain_checker.should_add_proxy(check_result):
+                result_text += f"\n💡 **建议：** 添加到代理规则（海外 IP {foreign_total} > 中国 IP {china_total}）\n"
+                keyboard = [
+                    [InlineKeyboardButton("✅ 确认添加", callback_data="confirm_add_proxy_yes")],
+                    [InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_proxy_no")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+            else:
+                result_text += f"\n❌ **不符合添加条件，无法添加到代理规则。**\n"
+                keyboard = [
+                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"处理添加代理域名回调失败: {e}")
             await query.edit_message_text("操作失败，请重试。")
     
     async def _handle_confirm_add_callback(self, query, user_id: int, data: str):
@@ -993,9 +1198,51 @@ class HandlerManager:
             logger.error(f"处理确认添加回调失败: {e}")
             await query.edit_message_text("操作失败，请重试。")
     
+    async def _handle_confirm_add_proxy_callback(self, query, user_id: int, data: str):
+        try:
+            if data == "confirm_add_proxy_no":
+                keyboard = [
+                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.edit_message_text(
+                    "❌ **已取消添加**\n\n您可以重新选择要添加的域名。",
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                self.set_user_state(user_id, "idle")
+                return
+            user_state = self.get_user_state(user_id)
+            domain_data = user_state.get("data", {})
+            if not domain_data:
+                await query.edit_message_text("❌ 数据丢失，请重新开始。")
+                return
+            domain = domain_data.get("domain")
+            if not domain:
+                await query.edit_message_text("❌ 域名数据丢失，请重新开始。")
+                return
+            self.set_user_state(user_id, "waiting_proxy_description", domain_data)
+            keyboard = [[InlineKeyboardButton("⏭️ 跳过说明", callback_data="skip_description_proxy")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                f"📝 **请输入域名说明**\n\n"
+                f"📍 **域名：** `{domain}`\n\n"
+                f"请输入该域名的用途说明（限制20个汉字以内）：\n\n"
+                f"例如：游戏官网、视频网站、新闻门户等",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"处理确认添加代理回调失败: {e}")
+            await query.edit_message_text("操作失败，请重试。")
+    
     async def _handle_skip_description(self, query, user_id: int):
         """处理跳过说明"""
         await self._add_domain_to_github(query, user_id, "")
+    
+    async def _handle_skip_description_proxy(self, query, user_id: int):
+        await self._add_domain_to_github_proxy(query, user_id, "")
     
     async def _handle_description_input(self, update: Update, description: str, user_id: int):
         """处理说明输入"""
@@ -1024,6 +1271,29 @@ class HandlerManager:
             
         except Exception as e:
             logger.error(f"处理说明输入失败: {e}")
+            await update.message.reply_text("处理失败，请重试。")
+    
+    async def _handle_proxy_description_input(self, update: Update, description: str, user_id: int):
+        try:
+            is_valid, processed_description = self.validate_description(description)
+            if not is_valid:
+                keyboard = [
+                    [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text(
+                    f"❌ **说明内容超出限制**\n\n"
+                    f"📏 **限制：** 最多 {self.MAX_DESCRIPTION_LENGTH} 个字符\n"
+                    f"📝 **您的输入：** {len(description)} 个字符\n\n"
+                    f"✂️ **截取后内容：** `{processed_description}`\n\n"
+                    "💡 请重新输入简短的说明，或发送 `/skip` 跳过说明。",
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                return
+            await self._add_domain_to_github_message_proxy(update.message, user_id, processed_description)
+        except Exception as e:
+            logger.error(f"处理代理说明输入失败: {e}")
             await update.message.reply_text("处理失败，请重试。")
     
     async def _add_domain_to_github(self, query, user_id: int, description: str):
@@ -1097,6 +1367,50 @@ class HandlerManager:
             logger.error(f"添加域名到GitHub失败: {e}")
             await query.edit_message_text("添加失败，请重试。")
     
+    async def _add_domain_to_github_proxy(self, query, user_id: int, description: str):
+        try:
+            user_state = self.get_user_state(user_id)
+            domain_data = user_state.get("data", {})
+            domain = domain_data.get("domain")
+            check_result = domain_data.get("check_result")
+            if not domain or not check_result:
+                await query.edit_message_text("❌ 数据丢失，请重新开始。")
+                return
+            target_domain = self.domain_checker.get_target_domain_to_add_proxy(check_result) or domain
+            username = query.from_user.first_name or query.from_user.username or str(query.from_user.id)
+            await query.edit_message_text("⏳ 正在添加域名到GitHub规则...")
+            add_result = await self.github_service.add_domain_to_rules(
+                target_domain, username, description, file_path=self.config.PROXY_RULE_FILE
+            )
+            if add_result.get("success"):
+                self.record_user_add(user_id)
+                _, remaining = self.check_user_add_limit(user_id)
+                result_text = f"✅ **域名添加成功！**\n\n"
+                result_text += f"📍 **添加的域名：** `{self.escape_markdown(target_domain)}`\n"
+                if description:
+                    result_text += f"📝 **说明：** {self.escape_markdown(description)}\n"
+                result_text += f"📂 **文件路径：** {self.escape_markdown(add_result['file_path'])}\n"
+                if add_result.get('commit_url'):
+                    result_text += f"🔗 **查看提交：** [点击查看]({add_result['commit_url']})\n"
+                    result_text += f"📝 **Commit ID：** `{add_result.get('commit_sha', '')[:8]}`\n"
+                result_text += f"💬 **提交信息：** `{add_result['commit_message']}`\n\n"
+                result_text += "🎉 域名已成功添加到代理规则中！\n\n"
+                result_text += f"💡 **添加限制：** 本小时内还可添加 {remaining} 个域名"
+            else:
+                result_text = f"❌ **域名添加失败**\n\n"
+                result_text += f"📍 **域名：** `{self.escape_markdown(target_domain)}`\n"
+                result_text += f"❌ **错误：** {self.escape_markdown(add_result.get('error', '未知错误'))}"
+            keyboard = [
+                [InlineKeyboardButton("➕ 继续添加", callback_data="add_proxy_rule")],
+                [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+            self.set_user_state(user_id, "idle")
+        except Exception as e:
+            logger.error(f"添加域名到GitHub代理规则失败: {e}")
+            await query.edit_message_text("添加失败，请重试。")
+    
     async def _add_domain_to_github_message(self, message, user_id: int, description: str):
         """通过消息添加域名到GitHub"""
         try:
@@ -1160,6 +1474,50 @@ class HandlerManager:
             
         except Exception as e:
             logger.error(f"添加域名到GitHub失败: {e}")
+            await message.reply_text("添加失败，请重试。")
+    
+    async def _add_domain_to_github_message_proxy(self, message, user_id: int, description: str):
+        try:
+            user_state = self.get_user_state(user_id)
+            domain_data = user_state.get("data", {})
+            domain = domain_data.get("domain")
+            check_result = domain_data.get("check_result")
+            if not domain or not check_result:
+                await message.reply_text("❌ 数据丢失，请重新开始。")
+                return
+            target_domain = self.domain_checker.get_target_domain_to_add_proxy(check_result) or domain
+            processing_msg = await message.reply_text("⏳ 正在添加域名到GitHub规则...")
+            username = message.from_user.first_name or message.from_user.username or str(message.from_user.id)
+            add_result = await self.github_service.add_domain_to_rules(
+                target_domain, username, description, file_path=self.config.PROXY_RULE_FILE
+            )
+            if add_result.get("success"):
+                self.record_user_add(user_id)
+                _, remaining = self.check_user_add_limit(user_id)
+                result_text = f"✅ **域名添加成功！**\n\n"
+                result_text += f"📍 **添加的域名：** `{self.escape_markdown(target_domain)}`\n"
+                if description:
+                    result_text += f"📝 **说明：** {self.escape_markdown(description)}\n"
+                result_text += f"📂 **文件路径：** {self.escape_markdown(add_result['file_path'])}\n"
+                if add_result.get('commit_url'):
+                    result_text += f"🔗 **查看提交：** [点击查看]({add_result['commit_url']})\n"
+                    result_text += f"📝 **Commit ID：** `{add_result.get('commit_sha', '')[:8]}`\n"
+                result_text += f"💬 **提交信息：** `{add_result['commit_message']}`\n\n"
+                result_text += "🎉 域名已成功添加到代理规则中！\n\n"
+                result_text += f"💡 **添加限制：** 本小时内还可添加 {remaining} 个域名"
+            else:
+                result_text = f"❌ **域名添加失败**\n\n"
+                result_text += f"📍 **域名：** `{self.escape_markdown(target_domain)}`\n"
+                result_text += f"❌ **错误：** {self.escape_markdown(add_result.get('error', '未知错误'))}"
+            keyboard = [
+                [InlineKeyboardButton("➕ 继续添加", callback_data="add_proxy_rule")],
+                [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
+            self.set_user_state(user_id, "idle")
+        except Exception as e:
+            logger.error(f"添加域名到GitHub代理规则失败: {e}")
             await message.reply_text("添加失败，请重试。")
 
  

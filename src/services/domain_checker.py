@@ -40,6 +40,14 @@ class DomainChecker:
                 "domain_china_status": False,
                 "second_level_china_status": False,
                 "ns_china_status": False,
+                "domain_china_count": 0,
+                "domain_foreign_count": 0,
+                "second_level_china_count": 0,
+                "second_level_foreign_count": 0,
+                "ns_china_count": 0,
+                "ns_foreign_count": 0,
+                "china_total_count": 0,
+                "foreign_total_count": 0,
                 "recommendation": "",
                 "details": []
             }
@@ -59,6 +67,8 @@ class DomainChecker:
                     result["details"].append(f"域名 IP {ip}: {location['country_name']}")
                 
                 result["domain_china_status"] = len(china_ips) > 0
+                result["domain_china_count"] = len(china_ips)
+                result["domain_foreign_count"] = max(len(domain_ips) - len(china_ips), 0)
                 if china_ips:
                     result["details"].append(f"域名有 {len(china_ips)} 个中国 IP")
             else:
@@ -79,6 +89,8 @@ class DomainChecker:
                         result["details"].append(f"二级域名 IP {ip}: {location['country_name']}")
                     
                     result["second_level_china_status"] = len(china_ips) > 0
+                    result["second_level_china_count"] = len(china_ips)
+                    result["second_level_foreign_count"] = max(len(second_level_ips) - len(china_ips), 0)
                     if china_ips:
                         result["details"].append(f"二级域名有 {len(china_ips)} 个中国 IP")
                 else:
@@ -120,6 +132,9 @@ class DomainChecker:
                 else:
                     result["details"].append(f"NS 服务器: 0/{total_ns_count} 个 IP 在中国大陆")
                 
+                result["ns_china_count"] = china_ns_count
+                result["ns_foreign_count"] = max(total_ns_count - china_ns_count, 0)
+                
                 # 添加详细的NS服务器信息（handler会统一添加•符号）
                 for ns, summary in ns_summary.items():
                     china_count = summary["china"]
@@ -133,6 +148,9 @@ class DomainChecker:
                         result["details"].append(f"{ns}: {foreign_count} 个海外 IP")
             else:
                 result["details"].append("无法查询到 NS 记录")
+            
+            result["china_total_count"] = result["domain_china_count"] + result["second_level_china_count"] + result["ns_china_count"]
+            result["foreign_total_count"] = result["domain_foreign_count"] + result["second_level_foreign_count"] + result["ns_foreign_count"]
             
             # 生成建议
             result["recommendation"] = self._generate_recommendation(result)
@@ -249,3 +267,19 @@ class DomainChecker:
         except Exception as e:
             logger.error(f"get_target_domain_to_add失败: {e}", exc_info=True)
             return None 
+    
+    def should_add_proxy(self, check_result: Dict[str, Any]) -> bool:
+        try:
+            china_total = int(check_result.get("china_total_count", 0) or 0)
+            foreign_total = int(check_result.get("foreign_total_count", 0) or 0)
+            return foreign_total > china_total
+        except Exception:
+            return False
+    
+    def get_target_domain_to_add_proxy(self, check_result: Dict[str, Any]) -> Optional[str]:
+        try:
+            second_level_domain = check_result.get("second_level_domain")
+            normalized_domain = check_result.get("normalized_domain")
+            return second_level_domain if second_level_domain else normalized_domain
+        except Exception:
+            return None

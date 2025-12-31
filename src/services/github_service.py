@@ -210,7 +210,8 @@ class GitHubService:
                 new_content = '\n'.join(lines)
                 
                 # 遵循 Conventional Commits 规范
-                commit_title = f"feat(rules): add direct domain {domain} by Telegram Bot (Telegram user: {user_name})"
+                commit_kind = "proxy" if file_path == self.config.PROXY_RULE_FILE else "direct"
+                commit_title = f"feat(rules): add {commit_kind} domain {domain} by Telegram Bot (Telegram user: {user_name})"
                 commit_body = description if description else ""
                 full_commit_message = commit_title
                 if commit_body and commit_body.strip():
