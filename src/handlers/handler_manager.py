@@ -355,10 +355,10 @@ class HandlerManager:
                 await self._handle_add_domain_callback(query, user_id, data)
             elif data.startswith("add_proxy_domain_"):
                 await self._handle_add_proxy_domain_callback(query, user_id, data)
-            elif data.startswith("confirm_add_"):
-                await self._handle_confirm_add_callback(query, user_id, data)
             elif data.startswith("confirm_add_proxy_"):
                 await self._handle_confirm_add_proxy_callback(query, user_id, data)
+            elif data.startswith("confirm_add_"):
+                await self._handle_confirm_add_callback(query, user_id, data)
             elif data == "skip_description":
                 await self._handle_skip_description(query, user_id)
             elif data == "skip_description_proxy":
