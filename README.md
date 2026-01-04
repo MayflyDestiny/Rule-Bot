@@ -2,6 +2,10 @@
 
 一个专门管理 Clash 规则的 Telegram 机器人，支持域名查询、添加直连规则与代理规则。通过智能检测和自动管理，帮助用户轻松维护 Clash 的直连/代理规则列表。
 
+## 📖 项目信息
+
+本项目基于 [Aethersailor-Github](https://github.com/Aethersailor/Rule-Bot) | [Aethersailor-Docker](https://hub.docker.com/r/aethersailor/rule-bot) 增加了TG用户白名单、启用 PROXY_RULE_FILE 配置项、支持直接 URL 输入自动触发查询等自用功能。
+
 ## ⚡ 快速开始
 
 ### 🚀 最简单的部署方式
