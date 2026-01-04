@@ -693,8 +693,10 @@ class HandlerManager:
                 # 显示详细信息
                 if check_result["details"]:
                     result_text += "\n🌍 *IP 归属地信息：*\n"
-                    for detail in check_result["details"][:5]:  # 限制显示数量
+                    for detail in check_result["details"][:8]:  # 限制显示数量
                         result_text += f"   • {detail}\n"
+                    if len(check_result["details"]) > 8:
+                         result_text += f"   • ... (还有 {len(check_result['details']) - 8} 条记录)\n"
                 
                 # 智能建议逻辑
                 china_total = check_result.get("china_total_count", 0)
