@@ -921,9 +921,10 @@ class HandlerManager:
                 keyboard.append([InlineKeyboardButton("✅ 确认添加", callback_data="confirm_add_yes")])
                 keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_no")])
             elif self.domain_checker.should_reject(check_result):
-                # 不符合条件，拒绝添加
-                result_text += "\n❌ **不符合添加条件，无法添加到直连规则。**"
-                keyboard.append([InlineKeyboardButton("➕ 添加其他域名", callback_data="add_direct_rule")])
+                # 不符合条件，但允许强制添加
+                result_text += "\n⚠️ **不符合添加条件，建议仔细核对，是否添加到直连规则。**"
+                keyboard.append([InlineKeyboardButton("⚠️ 强制添加", callback_data="confirm_add_yes")])
+                keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_no")])
             else:
                 # 默认情况（理论上不会到这里）
                 keyboard.append([InlineKeyboardButton("✅ 确认添加", callback_data="confirm_add_yes")])
@@ -1068,8 +1069,9 @@ class HandlerManager:
                 keyboard.append([InlineKeyboardButton("✅ 确认添加", callback_data="confirm_add_proxy_yes")])
                 keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_proxy_no")])
             else:
-                result_text += "\n❌ **不符合添加条件，无法添加到代理规则。**"
-                keyboard.append([InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")])
+                result_text += "\n⚠️ **不符合添加条件，建议仔细核对，是否添加到代理规则。**"
+                keyboard.append([InlineKeyboardButton("⚠️ 强制添加", callback_data="confirm_add_proxy_yes")])
+                keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_proxy_no")])
             keyboard.append([InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             await processing_msg.edit_text(result_text, reply_markup=reply_markup, parse_mode='Markdown')
@@ -1113,7 +1115,9 @@ class HandlerManager:
                 keyboard.append([InlineKeyboardButton("✅ 确认添加", callback_data="confirm_add_yes")])
                 keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_no")])
             else:
-                result_text += "\n❌ **不符合添加条件，无法添加到直连规则。**"
+                result_text += "\n⚠️ **不符合添加条件，建议仔细核对，是否添加到直连规则。**"
+                keyboard.append([InlineKeyboardButton("⚠️ 强制添加", callback_data="confirm_add_yes")])
+                keyboard.append([InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_no")])
             
             keyboard.append([InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")])
             
@@ -1151,9 +1155,10 @@ class HandlerManager:
                     [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
                 ]
             else:
-                result_text += f"\n❌ **不符合添加条件，无法添加到代理规则。**\n"
+                result_text += f"\n⚠️ **不符合添加条件，建议仔细核对，是否添加到代理规则。**\n"
                 keyboard = [
-                    [InlineKeyboardButton("➕ 添加其他域名", callback_data="add_proxy_rule")],
+                    [InlineKeyboardButton("⚠️ 强制添加", callback_data="confirm_add_proxy_yes")],
+                    [InlineKeyboardButton("❌ 取消添加", callback_data="confirm_add_proxy_no")],
                     [InlineKeyboardButton("🏠 返回主菜单", callback_data="main_menu")]
                 ]
             reply_markup = InlineKeyboardMarkup(keyboard)
